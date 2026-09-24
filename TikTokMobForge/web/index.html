@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bảng điều khiển LIVE</title>
+  <link rel="icon" type="image/png" href="/assets/iconapp.png">
+  <link rel="preload" href="/api/panorama" as="image">
+  <link rel="preload" href="/assets/card-cyan-clean.png" as="image">
+  <link rel="preload" href="/assets/card-pink-clean.png" as="image">
+  <link rel="preload" href="/assets/flow.png" as="image">
+  <link rel="preload" href="/assets/comment.png" as="image">
+  <link rel="preload" href="/assets/share.png" as="image">
+  <link rel="preload" href="/assets/like.png" as="image">
+  <link rel="stylesheet" href="styles.css?v=20260908-16">
+  <link rel="stylesheet" href="/monochrome.css?v=20260922-mapping-layout">
+</head>
+<body>
+  <main class="shell">
+    <header class="toolbar">
+      <nav id="tabs" aria-label="Điều hướng">
+        <button class="tab active" data-tab="live">Panel LIVE</button>
+        <button class="tab" data-tab="events">Tương tác</button>
+        <button class="tab" data-tab="gifts">Quà tặng</button>
+        <button class="tab" data-tab="voicevox">VOICEVOX / Cảm ơn quà</button>
+        <button class="tab" data-tab="settings">Cài đặt</button>
+        <button class="tab" data-tab="tests">Kiểm thử</button>
+        <button class="tab" data-tab="logs">Nhật ký</button>
+      </nav>
+      <div class="actions">
+        <span id="liveBadge" class="badge offline">Đã dừng</span>
+        <span id="saveStatus" class="save-status" role="status" aria-live="polite">Tự động lưu</span>
+        <button id="startBtn">Chạy LIVE</button>
+        <button id="stopBtn" class="danger">Dừng</button>
+      </div>
+    </header>
+
+    <section id="loading" class="loading">Đang nạp dữ liệu Minecraft…</section>
+
+    <section class="view active minecraft-stage" data-view="live">
+      <img class="generated-frame" src="assets/bg.png" alt="" aria-hidden="true">
+      <div class="panel-live-heading">
+        <div>
+          <span class="panel-live-kicker">MINECRAFT LIVE CONTROL</span>
+          <strong>Panel tương tác trực tiếp</strong>
+        </div>
+        <div class="actions"><button id="copyPanelBtn" type="button">Sao chép ảnh panel</button></div>
+      </div>
+      <div class="live-grid">
+        <article class="neon cyan">
+          <div class="section-title themed-title">
+            <div><span>Tương tác cơ bản</span><small>Mỗi tương tác sẽ tạo mob trong Minecraft!</small></div>
+          </div>
+          <div id="eventCards" class="event-cards"></div>
+        </article>
+        <article class="neon pink">
+          <div class="section-title themed-title">
+            <div><span>Quà tặng đặc biệt</span><small>Gửi quà để nhận vật phẩm giá trị trong Minecraft!</small></div>
+          </div>
+          <div id="giftPreview" class="gift-preview"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" data-view="events">
+      <div class="page-heading"><div><p class="eyebrow">TƯƠNG TÁC</p><h2>Mob theo sự kiện</h2></div><p>Chọn mob, số lượng và giới hạn ngay trong từng nhóm.</p></div>
+      <div id="eventsHome"><div id="interactionControls">
+      <div id="eventEditors" class="editor-grid"></div>
+        <div class="event-tuning" data-event="view">
+          <label><input id="view_enabled" data-config="bridge" type="checkbox"> Bật tạo mob khi có người xem</label>
+          <label>Lặp lại sau (giây)<input id="view_interval_seconds" data-config="bridge" type="number" min="1" max="86400"></label>
+          <label>Mob tối đa mỗi đợt View<input id="view_max_mobs_per_round" data-config="bridge" type="number" min="1" max="1000"></label>
+          <small>Mob mang tên người vào LIVE hoặc tương tác. Lặp lại theo thời gian hiện diện ước lượng; không có danh sách đầy đủ người rời phòng. Ngừng theo dõi sau 5 phút không nhận tín hiệu của người đó (hoặc chu kỳ + 90 giây nếu dài hơn). Người chỉ xem im lặng có thể không được nhận diện.</small>
+        </div>
+      <div class="event-tuning" data-event="like">
+        <label>Số mob mỗi mốc tim<input id="like_spawn_count" type="number" min="1" max="100"></label>
+      </div>
+      <div class="event-tuning" data-event="comment">
+        <label>Số bình luận được tạo mob / người<input id="comment_limit" type="number" min="1"></label>
+        <label>Thời gian chờ riêng (giây)<input id="comment_cooldown_seconds" type="number" min="1" step="0.5"></label>
+      </div>
+      <div class="event-tuning" data-event="share">
+        <label>Số chia sẻ được tạo mob / người<input id="share_limit" type="number" min="1"></label>
+        <label>Thời gian chờ riêng (giây)<input id="share_cooldown_seconds" type="number" min="1" step="0.5"></label>
+      </div>
+      <p class="interaction-note">Giới hạn tính riêng theo tài khoản và loại tương tác. Hai người gửi cùng lúc đều được tạo mob; người này đang chờ không khóa người khác.</p>
+      </div></div>
+    </section>
+
+    <section class="view" data-view="gifts">
+      <div class="page-heading"><div><p class="eyebrow">KÉO VÀ THẢ</p><h2>Ghép quà với phần thưởng</h2></div><div><button id="addGiftBtn" class="primary">+ Thêm quà</button></div></div>
+      <div class="gift-workspace">
+        <aside class="panel source-panel">
+          <h3>Quà trong phòng LIVE</h3>
+          <button id="updateGiftsBtn" type="button">Cập nhật quà và ảnh TikTok</button>
+          <p id="giftCatalogStatus" class="settings-help" role="status"></p>
+          <input id="giftSearch" class="search" placeholder="Tìm tên, xu hoặc Gift ID…">
+          <div id="giftSource" class="source-list"></div>
+        </aside>
+        <section class="panel mapping-panel">
+          <div class="mapping-head"><div><h3>Danh sách đã gán</h3><small>Không giới hạn số dòng · kéo để đổi thứ tự</small></div><button id="testGiftsBtn">Test quà</button></div>
+          <div id="mappingList" class="mapping-list"></div>
+          <div id="emptyMappings" class="empty">Chưa có quà. Nhấn “Thêm quà” hoặc kéo quà từ cột trái vào đây.</div>
+        </section>
+        <aside class="panel source-panel">
+          <h3>Mob và vật phẩm</h3>
+          <input id="rewardSearch" class="search" placeholder="Tìm mob, vật phẩm hoặc ID…">
+          <div class="chips"><button class="chip active" data-filter="all">Tất cả</button><button class="chip" data-filter="mob">Mob</button><button class="chip" data-filter="item">Vật phẩm</button><button class="chip" data-filter="special">Đặc biệt</button></div>
+          <small>Quà chơi khăm nằm trong Đặc biệt. Kéo hiệu ứng vào quà để gán; mức xu chỉ là gợi ý.</small>
+          <div id="rewardSource" class="reward-source"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="view" data-view="settings">
+      <div class="page-heading"><div><p class="eyebrow">CÀI ĐẶT</p><h2>Mod, hiển thị và đọc bình luận</h2></div><button id="installBtn">Cài/Cập nhật mod</button></div>
+      <p class="settings-help">Mọi thay đổi được <b>tự động lưu sau 1 giây</b>. Giới hạn mob và quy tắc tương tác đồng bộ hai chiều với <b>F8 → Cài đặt TikTok Mob</b> trong game, không cần dừng LIVE. Đổi cổng cần mở lại Minecraft; đổi tài khoản hoặc giọng đọc cần Dừng → Chạy LIVE.</p>
+      <nav class="settings-nav" role="tablist" aria-label="Nhóm cài đặt">
+        <button type="button" role="tab" id="tab-settingsConnection" data-settings-tab="settingsConnection" aria-controls="settingsConnection" aria-selected="true" class="setting-tab active">Kết nối</button>
+        <button type="button" role="tab" id="tab-settingsMobs" data-settings-tab="settingsMobs" aria-controls="settingsMobs" aria-selected="false" class="setting-tab">Mob</button>
+        <button type="button" role="tab" id="tab-settingsDisplay" data-settings-tab="settingsDisplay" aria-controls="settingsDisplay" aria-selected="false" class="setting-tab">Hàng thông báo</button>
+        <button type="button" role="tab" id="tab-settingsContent" data-settings-tab="settingsContent" aria-controls="settingsContent" aria-selected="false" class="setting-tab">Nội dung hiển thị</button>
+        <button type="button" role="tab" id="tab-settingsPosition" data-settings-tab="settingsPosition" aria-controls="settingsPosition" aria-selected="false" class="setting-tab">Vị trí</button>
+        <button type="button" role="tab" id="tab-settingsRewards" data-settings-tab="settingsRewards" aria-controls="settingsRewards" aria-selected="false" class="setting-tab">Hiệu ứng quà</button>
+        <button type="button" role="tab" id="tab-settingsVoice" data-settings-tab="settingsVoice" aria-controls="settingsVoice" aria-selected="false" class="setting-tab">Giọng comment</button>
+        <button type="button" role="tab" id="tab-settingsVoiceQueue" data-settings-tab="settingsVoiceQueue" aria-controls="settingsVoiceQueue" aria-selected="false" class="setting-tab">Hàng đọc comment</button>
+        <button type="button" role="tab" id="tab-settingsInteractions" data-settings-tab="settingsInteractions" aria-controls="settingsInteractions" aria-selected="false" class="setting-tab">Chống spam</button>
+        <button type="button" data-go="voicevox">GIF / Cảm ơn trong Minecraft ↗</button>
+      </nav>
+      <div class="settings-grid">
+        <article id="settingsConnection" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsConnection" class="panel form-grid">
+          <h3>Kết nối</h3>
+          <label>Tài khoản TikTok LIVE<input id="tiktok_username"></label>
+          <label>Máy chủ Minecraft<input id="minecraft_host"></label>
+          <label>Cổng bridge<input id="minecraft_port" type="number"></label>
+          <label class="wide">Thư mục Minecraft<input id="minecraft_directory"></label>
+          <label class="check wide"><input id="keep_minecraft_running_in_background" type="checkbox"> Tiếp tục chạy khi chuyển cửa sổ</label>
+        </article>
+        <article id="settingsMobs" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsMobs" hidden class="panel form-grid">
+          <h3>Giới hạn và thời gian</h3>
+          <label>Mob tối đa mỗi người<input id="max_mobs_per_user" type="number" min="1"></label>
+          <label>Mob tối đa toàn world<input id="max_mobs_total" type="number" min="1"></label>
+          <label>Vòng đời mob (giây)<input id="mob_lifetime_seconds" type="number" min="1"></label>
+          <label>Tương tác mỗi tick<input id="max_interactions_per_tick" type="number" min="1"></label>
+          <label>Golem: khoảng dịch chuyển về bạn (block)<input id="golem_teleport_distance" type="number" min="5" max="128" step="1"></label>
+          <label>Chó giáp: khoảng dịch chuyển về bạn (block)<input id="wolf_teleport_distance" type="number" min="5" max="128" step="1"></label>
+          <label>Khoảng sinh tối thiểu<input id="spawn_min_distance" type="number" min="0" step="0.5"></label>
+          <label>Khoảng sinh tối đa<input id="spawn_max_distance" type="number" min="0" step="0.5"></label>
+          <label>Vị trí triệu hồi<select id="spawn_direction"><option value="front">Trước mặt</option><option value="right">Bên phải</option><option value="left">Bên trái</option><option value="back">Đằng sau</option><option value="random">Ngẫu nhiên</option></select></label>
+          <label>Độ cao sinh mob<input id="spawn_height_offset" type="number" step="0.5"></label>
+          <label>Hàng đợi xử lý gameplay<input id="max_pending_events" type="number" min="10"></label>
+          <label class="check"><input id="enderman_targets_player" type="checkbox"> Enderman nhắm người chơi</label>
+          <label class="check"><input id="mobs_persistent" type="checkbox"> Chống biến mất tự nhiên</label>
+          <label class="check wide"><input id="show_countdown_in_name" type="checkbox"> Hiện đếm ngược trong tên mob</label>
+          <label class="check wide"><input id="show_death_counter" type="checkbox"> Hiện bộ đếm số lần chết trong Minecraft</label>
+          <p class="settings-help wide">Giới hạn số lượng và vòng đời chỉ áp dụng mob tương tác thường. Mob donate không tính vào giới hạn, không hết hạn và không tự biến mất; vẫn nhận sát thương và có thể chết. Khoảng sinh tính bằng block; độ cao âm là dưới chân người chơi.</p>
+        </article>
+        <article id="settingsDisplay" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsDisplay" hidden class="panel form-grid">
+          <h3>Hàng đợi thông báo trên màn hình</h3>
+          <label class="check"><input id="notification_enabled" data-config="mod" type="checkbox"> Bật thông báo trong Minecraft</label>
+          <label class="check"><input id="notification_show_username" data-config="mod" type="checkbox"> Hiện tên người tương tác</label>
+          <label>Số thông báo chờ tối đa<input id="notification_queue_size" type="number" min="1" max="10000"></label>
+          <label>Khi hàng đợi đầy<select id="notification_overflow_policy" data-config="mod"><option value="drop_newest">Giữ lượt đang chờ, bỏ lượt mới</option><option value="drop_oldest">Bỏ lượt cũ nhất, nhận lượt mới</option></select></label>
+          <label>Thời gian tương tác thường (giây)<input id="notification_duration_seconds" type="number" min="0.05" max="300" step="0.05"></label>
+          <label>Thời gian donate (giây)<input id="donation_notification_duration_seconds" type="number" min="0.05" max="300" step="0.05"></label>
+          <label>Hiện dần (giây)<input id="notification_fade_in_seconds" data-config="mod" type="number" min="0" max="30" step="0.05"></label>
+          <label>Mờ dần (giây)<input id="notification_fade_out_seconds" data-config="mod" type="number" min="0" max="30" step="0.05"></label>
+          <label>Nghỉ giữa thông báo (giây)<input id="notification_gap_seconds" data-config="mod" type="number" min="0" max="300" step="0.05"></label>
+          <label>Màu nội dung thường<input id="notification_title_color" data-config="mod" type="color"></label>
+          <label>Màu tên người dùng<input id="notification_username_color" data-config="mod" type="color"></label>
+          <label>Màu donate<input id="donation_notification_color" data-config="mod" type="color"></label>
+          <label class="check"><input id="donation_priority_enabled" data-config="mod" type="checkbox"> Ưu tiên donate trong hàng hiển thị</label>
+          <label class="check"><input id="donation_notification_bold" data-config="mod" type="checkbox"> Donate in đậm</label>
+          <p class="setting-note wide">Mỗi tương tác chiếm một lượt chờ. Donate ưu tiên sẽ hiện sau lượt đang phát, trước lượt thường; khi đầy sẽ thay lượt thường cuối hàng. Màu mặc định cam, thường 1,5 giây và donate 4 giây. Tắt ưu tiên để xếp lượt mới theo thứ tự đến.</p>
+        </article>
+        <article id="settingsContent" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsContent" hidden class="panel form-grid">
+          <h3>Nội dung và loại tương tác được hiển thị</h3>
+          <label class="check"><input id="display_comment_enabled" data-config="bridge" type="checkbox"> Hiện comment</label>
+          <label class="check"><input id="display_share_enabled" data-config="bridge" type="checkbox"> Hiện share</label>
+          <label class="check"><input id="display_like_enabled" data-config="bridge" type="checkbox"> Hiện like kể cả chưa đủ mốc</label>
+          <label class="check"><input id="display_follow_enabled" data-config="bridge" type="checkbox"> Hiện follow</label>
+          <label class="check"><input id="display_view_enabled" data-config="bridge" type="checkbox"> Hiện View</label>
+          <label class="check"><input id="display_gift_enabled" data-config="bridge" type="checkbox"> Hiện donate / quà tặng</label>
+          <label class="check"><input id="display_unmapped_gifts" data-config="bridge" type="checkbox"> Hiện cả quà chưa gán phần thưởng</label>
+          <label class="check wide"><input id="display_comment_text" data-config="bridge" type="checkbox"> Hiện nội dung bình luận thay chữ “Comment”</label>
+          <label>Độ dài comment hiển thị<input id="display_comment_max_characters" data-config="bridge" type="number" min="1" max="96"></label>
+          <label class="check"><input id="display_limited_comments" data-config="bridge" type="checkbox"> Hiện cả comment đang bị giới hạn</label>
+          <label class="check wide"><input id="display_limited_shares" data-config="bridge" type="checkbox"> Hiện cả share đang bị giới hạn</label>
+          <p class="settings-help wide">Các nút hiển thị chỉ điều khiển thông báo. Giới hạn tạo mob vẫn áp dụng. Nội dung dài tự thu nhỏ để vừa màn hình Minecraft.</p>
+        </article>
+        <article id="settingsPosition" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsPosition" hidden class="panel form-grid">
+          <h3>Cách hiển thị từng loại tương tác</h3>
+          <p class="settings-help wide">Chọn kiểu cũ, giữa màn hình hoặc text chat trong game. Các vị trí cũ được giữ lại khi đổi kiểu. Cấu hình tự động lưu; GIF cảm ơn quà vẫn dùng thiết lập riêng.</p>
+          <div id="notificationDisplayModes" class="wide form-grid"></div>
+          <label>Kiểu chung<select id="bulkDisplayMode"><option value="legacy">Kiểu cũ / vị trí tùy chỉnh</option><option value="center">Giữa màn hình</option><option value="chat">Chat trong game</option></select></label>
+          <div class="actions"><button id="applyDisplayModeAll" type="button">Áp dụng cho tất cả</button></div>
+          <h3>Vị trí thông báo trên màn hình</h3>
+          <p class="setting-note wide">Sửa từng dòng hoặc tick các loại cần áp dụng cùng vị trí. Ngang: 0% trái → 100% phải; dọc: 0% trên → 100% dưới. Có thể kéo thông báo trong khung xem thử.</p>
+          <div id="notification_positions" class="wide position-rows"></div>
+          <label>Ngang chung (%)<input id="bulkPositionX" type="number" min="0" max="100" step="1" value="50"></label>
+          <label>Dọc chung (%)<input id="bulkPositionY" type="number" min="0" max="100" step="1" value="40"></label>
+          <label>Cỡ chữ chung<input id="bulkPositionScale" type="number" min="0.5" max="4" step="0.1" value="1"></label>
+          <div class="wide actions"><button id="applyPositionSelected" type="button">Áp dụng cho đã tick</button><button id="applyPositionAll" type="button">Áp dụng cho tất cả</button></div>
+          <label>Xem thử loại<select id="positionPreviewKind"><option value="comment">Comment</option><option value="like">Like</option><option value="share">Share</option><option value="follow">Follow</option><option value="gift">Quà tặng</option><option value="view">View</option></select></label>
+          <div class="wide actions"><span id="previewSizeLabel">Khung game 1920 × 1080 (16:9)</span><button id="refreshPreviewSize" type="button">Lấy kích thước Minecraft</button></div>
+          <div id="notificationPreview" class="notification-preview wide" aria-label="Kéo để đổi vị trí thông báo"><div id="notificationPreviewText"><strong>Comment mẫu</strong><span>Tên người dùng</span></div><img class="bag-preview-icon" src="/assets/iconbaggift.png" alt="Vị trí túi quà góc dưới phải"></div>
+          <p id="displayModeHint" class="settings-help wide"></p>
+          <button id="previewDonationBtn" type="button">Xem màu donate / thường</button>
+        </article>
+        <article id="settingsRewards" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsRewards" hidden class="panel form-grid">
+          <h3>Phần thưởng và hiệu ứng</h3>
+          <label class="wide">Quà chưa có trong danh sách đã gán<select id="unmapped_gift_mode" data-config="bridge"><option value="thanks">Chỉ cảm ơn, không tặng phần thưởng</option><option value="reward">Cảm ơn và tặng phần thưởng mặc định</option></select></label>
+          <div id="unmappedRewardSettings" class="wide form-grid">
+            <div class="wide">Phần thưởng mặc định<div id="unmappedRewardPicker"></div></div>
+            <input id="unmapped_gift_action" data-config="bridge" type="hidden">
+            <input id="unmapped_gift_target" data-config="bridge" type="hidden">
+            <label>Số lượng mỗi quà<input id="unmapped_gift_amount" data-config="bridge" type="number" min="1" max="100"></label>
+            <label>Cấp (Enchant: 0 = Max)<input id="unmapped_gift_level" data-config="bridge" type="number" min="1" max="255"></label>
+          </div>
+          <p class="settings-help wide">Chỉ áp dụng cho quà chưa gán. Quà có trong danh sách dùng phần thưởng riêng, không nhận thêm phần thưởng mặc định. Đổi cài đặt: Dừng → Chạy LIVE.</p>
+          <p class="setting-note wide gift-bag-help"><img src="/assets/iconbaggift.png" alt="Túi quà"> Quà vật phẩm vào túi vô hạn, giữ khi chết và khi mở lại world. Nhấn B trong game hoặc bấm icon ở góc dưới phải màn hình hành trang để mở. Chỉ lấy ra; đồ đã lấy ra chịu luật mất đồ của world. Enchant, hồi phục và mob áp dụng trực tiếp.</p>
+          <label>Thời gian hiệu ứng (giây)<input id="effect_duration_seconds" type="number" min="0.05" max="3600" step="0.05"></label>
+          <label>Tim vàng mỗi Hoa Hồng<input id="absorption_hearts_per_rose" type="number" min="0.5" max="100" step="0.5"></label>
+          <label>Số mũi tên Money Gun<input id="money_gun_arrow_count" type="number" min="1" max="64"></label>
+          <label>Cấp hiệu ứng Universe<input id="universe_effect_level" type="number" min="1" max="10"></label>
+        </article>
+        <article id="settingsVoice" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsVoice" hidden class="panel form-grid">
+          <h3>Giọng đọc bình luận</h3>
+          <label class="wide">Dịch vụ giọng đọc<select id="tts_provider" data-config="bridge"><option value="edge">Tiếng Việt — Hoài My / Nam Minh (không cần key)</option><option value="elevenlabs">ElevenLabs — đa ngôn ngữ / tiếng Việt</option></select></label>
+          <div id="edgeSettings" class="wide form-grid" hidden>
+            <p class="wide setting-note">Đọc trực tiếp bình luận tiếng Việt bằng giọng Hoài My hoặc Nam Minh. Chọn Hoài My rồi tăng cao độ để tạo giọng nữ cao, dễ thương. Cần Internet; không cần API key hoặc mở VOICEVOX.</p>
+            <label class="wide">Giọng tiếng Việt<select id="tts_edge_voice" data-config="bridge"><option value="vi-VN-HoaiMyNeural">Hoài My — nữ tiếng Việt</option><option value="vi-VN-NamMinhNeural">Nam Minh — nam tiếng Việt</option></select></label>
+            <label>Cao độ thêm (Hz, 0 = giọng gốc)<input id="tts_edge_pitch" data-config="bridge" type="number" min="-100" max="100" step="1"></label>
+            <label>Tốc độ thêm (%, 0 = bình thường)<input id="tts_edge_rate" data-config="bridge" type="number" min="-50" max="100" step="1"></label>
+            <label class="wide">Chỉnh nhanh<select id="edge_preset"><option value="">Tùy chỉnh…</option><option value="cute">Nữ dễ thương — cao, tươi sáng</option><option value="soft">Nữ dịu dàng — nhẹ, chậm</option><option value="energetic">Nữ năng động — nhanh, vui</option><option value="normal">Giọng gốc</option></select></label>
+          </div>
+
+          <label class="wide">ElevenLabs API key<input id="api_key" type="password"></label>
+          <p class="settings-help wide">Nếu chưa có khóa ElevenLabs, bình luận sẽ được đọc bằng giọng Việt miễn phí (cần Internet).</p>
+          <label class="wide">Tìm giọng trong danh sách
+            <input id="voice_search" placeholder="Lọc theo tên giọng hoặc Voice ID…" type="search">
+          </label>
+          <label class="wide">Chọn giọng đọc<select id="voice_choice"></select></label>
+          <label class="wide">Chọn model đọc
+            <select id="tts_model_choice"></select>
+          </label>
+          <p id="voiceCatalogStatus" class="wide voice-catalog-status" role="status">Đang tải danh sách giọng và model…</p>
+          <p id="voiceModelHelp" class="wide setting-note"></p>
+          <label>Tên giọng (có thể nhập tay)<input id="tts_voice_name"></label>
+          <label>Voice ID (có thể nhập tay)<input id="tts_voice_id"></label>
+          <label class="wide">Model ID dùng để đọc<input id="tts_model_id"></label>
+          <label class="check wide"><input id="live_comments_only" data-config="bridge" type="checkbox"> Chỉ đọc bình luận LIVE, không cần Minecraft (tắt tương tác và cảm ơn quà)</label>
+          <label class="check"><input id="tts_enabled" type="checkbox"> Bật đọc comment</label>
+          <label class="check"><input id="tts_read_username" type="checkbox"> Đọc tên người comment</label>
+          <label class="check wide"><input id="tts_read_limited_comments" data-config="bridge" type="checkbox"> Đọc cả comment bị giới hạn tạo mob</label>
+          <label>Âm lượng (0 tắt tiếng — 1 tối đa)<input id="tts_volume" data-config="bridge" type="number" min="0" max="1" step="0.05"></label>
+          <label>Độ ổn định (Stability)<input id="tts_stability" type="number" min="0" max="1" step="0.05"></label>
+          <label>Độ giống giọng gốc<input id="tts_similarity_boost" type="number" min="0" max="1" step="0.05"></label>
+          <label>Mức biểu cảm (Style)<input id="tts_style" type="number" min="0" max="1" step="0.05"></label>
+          <label>Tốc độ giọng (0,7–1,2)<input id="tts_speed" type="number" min="0.7" max="1.2" step="0.05"></label>
+          <label>Mã ngôn ngữ (trống = tự nhận diện)<input id="tts_language_code" maxlength="3" placeholder="vi"></label>
+          <label class="check"><input id="tts_use_speaker_boost" type="checkbox"> Speaker boost</label>
+          <label class="wide">Câu nghe thử (trống = câu mẫu theo dịch vụ)<textarea id="tts_test_text" data-config="bridge" maxlength="1000" rows="3" placeholder="Xin chào, cảm ơn bạn đã bình luận!"></textarea></label>
+          <p class="wide setting-note">Cài đặt tự lưu. Bấm Test để nghe thông số vừa chỉnh; nếu bridge LIVE đang chạy, dừng/bật lại bridge để áp dụng cho bình luận mới.</p>
+          <div class="voice-actions"><button id="reloadVoicesBtn">Tải lại danh sách</button><button id="testTtsBtn">Test giọng nói</button></div>
+        </article>
+      </div>
+      <article id="settingsVoiceQueue" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsVoiceQueue" hidden class="panel form-grid"><h3>Hàng đọc bình luận</h3>
+          <label>Độ dài comment tối đa<input id="tts_max_characters" type="number" min="1" max="5000"></label>
+          <label>Số comment trong hàng đợi giọng đọc<input id="tts_queue_size" type="number" min="1" max="10000"></label>
+          <label class="check wide"><input id="tts_keep_latest_comment" type="checkbox"> Chọn comment mới nhất trong khoảng chờ</label>
+          <label>Khoảng chờ / nghỉ (giây)<input id="tts_pause_between_comments_seconds" type="number" min="0" max="3600" step="0.1"></label>
+          <p id="ttsQueueHelp" class="settings-help wide"></p>
+          <label>Im lặng cuối câu (giây)<input id="tts_trailing_silence_seconds" type="number" min="0" max="30" step="0.1"></label>
+      </article>
+      <section id="settingsInteractions" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsInteractions" hidden class="settings-interactions"><h3>Mob theo tương tác, số lượng và chống spam</h3><div id="settingsEventsHome"></div></section>
+    </section>
+
+    <section class="view" data-view="voicevox">
+      <div class="page-heading"><div><p class="eyebrow">CẢM ƠN QUÀ</p><h2>VOICEVOX &amp; GIF</h2></div></div>
+      <p class="settings-help">Nhận quà → hiện GIF và avatar trong Minecraft → đọc câu cảm ơn tiếng Nhật đã chọn. Mỗi combo hoàn tất được cảm ơn một lần, kèm tổng số quà; áp dụng cả quà chưa gán phần thưởng. Comment vẫn dùng giọng riêng trong Cài đặt.</p>
+      <div class="gift-thanks-layout">
+        <article class="panel form-grid">
+          <h3>Giọng cảm ơn VOICEVOX</h3>
+          <label class="check wide"><input id="gift_voicevox_enabled" data-config="bridge" type="checkbox"> Bật đọc cảm ơn khi nhận quà</label>
+          <label class="wide">Âm lượng lời cảm ơn<input id="gift_voicevox_volume" data-config="bridge" type="number" min="0" max="1" step="0.05"></label>
+          <label class="wide">Cách chọn câu cảm ơn<select id="gift_phrase_mode" data-config="bridge"><option value="fixed">Câu đã chọn</option><option value="random">Ngẫu nhiên mỗi lượt quà</option><option value="custom">Tự nhập tiếng Nhật</option></select></label>
+          <label class="wide">Danh sách câu tiếng Nhật<select id="gift_phrase_id" data-config="bridge"></select></label>
+          <label class="wide">Câu tự nhập để VOICEVOX đọc<textarea id="gift_phrase_custom" data-config="bridge" rows="3" maxlength="160" placeholder="お兄ちゃん、ありがとう！"></textarea></label>
+          <button id="randomThanksBtn" type="button">Bật câu ngẫu nhiên</button>
+          <p id="giftPhraseHelp" class="setting-note wide"></p>
+          <div id="voicevoxSettings" class="wide form-grid">
+            <p class="wide setting-note">Giọng anime Nhật cao, dễ thương: thử Zundamon hoặc các nhân vật khác trong danh sách. Engine đi kèm dự án sẽ tự mở khi bấm Tải giọng / Test. Nếu chưa cài, chạy CAI_VOICEVOX.bat một lần (tải khoảng 1,8 GB), hoặc cài và mở <a href="https://voicevox.hiroshiba.jp/" target="_blank" rel="noopener noreferrer">VOICEVOX cho Windows</a>. Không cần API key. Giọng này chỉ dùng đọc lời cảm ơn quà.</p>
+            <label class="wide">Địa chỉ VOICEVOX<input id="tts_voicevox_url" data-config="bridge" placeholder="http://127.0.0.1:50021"></label>
+            <label class="wide">Nhân vật / kiểu giọng<select id="voicevox_choice"></select></label>
+            <label>ID giọng (có thể nhập tay)<input id="tts_voicevox_speaker_id" data-config="bridge" type="number" min="0" max="1000000"></label>
+            <button id="reloadVoicevoxBtn" type="button">Tải giọng từ VOICEVOX</button>
+            <p id="voicevoxStatus" class="wide setting-note" role="status">Bấm Tải giọng để tự mở engine và tải những giọng đã cài.</p>
+            <label>Tốc độ (0,5–2)<input id="tts_voicevox_speed" data-config="bridge" type="number" min="0.5" max="2" step="0.05"></label>
+            <label>Cao độ (âm trầm / dương cao)<input id="tts_voicevox_pitch" data-config="bridge" type="number" min="-0.15" max="0.15" step="0.01"></label>
+            <label>Ngữ điệu (0 đều — 2 nhấn mạnh)<input id="tts_voicevox_intonation" data-config="bridge" type="number" min="0" max="2" step="0.05"></label>
+            <label>Chỉnh nhanh<select id="voicevox_preset"><option value="">Tùy chỉnh…</option><option value="cute">Kawaii — cao, dễ thương</option><option value="soft">Dịu dàng — nhẹ, chậm</option><option value="energetic">Năng động — nhanh, biểu cảm</option><option value="normal">Giọng gốc</option></select></label>
+            <p class="wide setting-note">Có thể chọn nhân vật trong danh sách hoặc nhập ID giọng trực tiếp. Câu cảm ơn và GIF chọn ngẫu nhiên độc lập; không đổi giọng comment.</p>
+          </div>
+        </article>
+        <article class="panel form-grid">
+          <h3>GIF &amp; avatar người tặng</h3>
+          <label class="check wide"><input id="gift_overlay_enabled" data-config="bridge" type="checkbox"> Hiện GIF và avatar trên màn hình</label>
+          <label>Thời gian hiển thị tối thiểu (giây)<input id="gift_overlay_duration_seconds" data-config="bridge" type="number" min="1" max="60" step="0.5"></label>
+          <label>Kích thước thông báo (px trên khung 1920)<input id="gift_overlay_width" data-config="bridge" type="number" min="160" max="800"></label>
+          <label>Ngang (%)<input id="gift_overlay_x" data-config="bridge" type="number" min="0" max="100" step="1"></label>
+          <label>Dọc (%)<input id="gift_overlay_y" data-config="bridge" type="number" min="0" max="100" step="1"></label>
+          <label class="wide">Số lượt cảm ơn chờ tối đa<input id="gift_alert_queue_size" data-config="bridge" type="number" min="1" max="10000"></label>
+          <label class="check wide"><input id="gift_gif_random" data-config="bridge" type="checkbox"> Chọn ngẫu nhiên GIF mỗi lượt quà</label>
+          <label class="wide">GIF cố định / xem trước<select id="gift_gif_file" data-config="bridge"></select></label>
+          <button id="reloadGiftMediaBtn" type="button">Nạp lại GIF trong thư mục</button>
+          <button id="shuffleGiftPreviewBtn" type="button">Xem mẫu ngẫu nhiên</button>
+          <p id="giftMediaStatus" class="settings-help wide"></p>
+          <div class="gift-position-preview wide" id="giftPositionPreview" aria-label="Khung Minecraft: kéo thông báo để chỉnh vị trí"><div id="giftPositionSample" class="gift-thanks-preview"><img id="giftPreviewGif" src="/assets/GIF/kawaiianimegirlGIF.gif" alt="GIF cảm ơn quà"><div><span class="avatar-placeholder">T</span><strong>Tên người tặng TikTok</strong><span>Hoa Hồng ×3</span></div><b id="giftPreviewPhrase">THANKIU ONICHANN~~</b></div></div>
+          <p class="settings-help wide">Kéo thông báo trong khung để chỉnh vị trí. 0% là trái/trên, 100% là phải/dưới; thay kích thước sẽ phóng cả GIF, avatar và chữ. Khung theo tỷ lệ Minecraft; ảnh xem thử là mẫu.</p>
+          <p class="setting-note wide">Thông báo dọc, nền trong suốt, được vẽ trực tiếp trong Minecraft (kể cả toàn màn hình và Game Capture). Cần cài mod mới, mở world và bật HUD. Avatar thật lấy từ người tặng; nếu thiếu/lỗi ảnh, hiện chữ đầu tên.</p>
+          <p class="setting-note wide">Từng lượt hiển thị tuần tự, ít nhất đủ thời gian đọc. Khi hàng đầy chỉ bỏ lượt cảm ơn mới, phần thưởng trong game vẫn được xử lý.</p>
+          <button id="testGiftAlertBtn" class="primary wide" type="button">Test VOICEVOX + GIF + tên mẫu</button>
+          <p class="settings-help wide">Tự lưu sau 1 giây. Dừng → Chạy LIVE để áp dụng thay đổi. Test không tạo vật phẩm hoặc mob.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" data-view="tests">
+      <div class="page-heading"><div><p class="eyebrow">KIỂM THỬ</p><h2>Triệu hồi, spam và quà tặng</h2></div><button id="stopTestBtn" class="danger" disabled>Dừng bài test</button></div>
+      <p class="settings-help">Mở world Minecraft có mod để nhận lệnh. Không cần bật TikTok LIVE. Test gửi trực tiếp theo cấu hình hiện tại, bỏ qua bước chờ tim và chống spam của bridge; giới hạn mob trong game vẫn áp dụng.</p>
+      <div class="test-progress panel"><strong id="testStatus" role="status">Chưa chạy bài test</strong><progress id="testProgress" value="0" max="1"></progress></div>
+      <div class="settings-grid test-grid">
+        <article class="panel form-grid">
+          <h3>Thông số cho test mob / quà</h3>
+          <label class="wide">Tên hiển thị người thử<input id="testName" value="Test User" maxlength="40"></label>
+          <label>Số người thử<input id="testUsers" type="number" value="1" min="1" max="50"></label>
+          <label>Số lượt mỗi người<input id="testCount" type="number" value="1" min="1" max="100"></label>
+          <label>Nghỉ giữa lệnh (giây)<input id="testInterval" type="number" value="0.2" min="0" max="10" step="0.05"></label>
+          <p class="settings-help wide">Mỗi lần chạy dùng ID người thử mới. Các lượt của cùng một người dùng chung ID để kiểm tra giới hạn mob/người.</p>
+        </article>
+        <article class="panel form-grid">
+          <h3>Triệu hồi từng mob</h3>
+          <div id="testMobPicker" class="wide"></div>
+          <button class="primary wide" id="testSingleMobBtn" data-test-run>Triệu hồi mob đã chọn</button>
+          <p class="settings-help wide">Mỗi lượt tạo một mob đã chọn. Với test tương tác bên dưới, số mob mỗi lượt lấy theo cấu hình của Like / Comment / Share / Follow.</p>
+        </article>
+        <article class="panel form-grid">
+          <h3>Test từng tương tác hoặc full spawn</h3>
+          <div id="testEventButtons" class="test-event-buttons wide"></div>
+          <button class="primary wide" id="testFullMobsBtn" data-test-run>Full spawn: cả 4 tương tác</button>
+        </article>
+        <article class="panel form-grid">
+          <h3>Spam triệu hồi nhiều người</h3>
+          <label>Loại tương tác<select id="testSpamEvent"><option value="all">Luân phiên cả 4 loại</option><option value="comment">Comment</option><option value="share">Share</option><option value="like">Like</option><option value="follow">Follow</option></select></label>
+          <label>Số người spam<input id="testSpamUsers" type="number" min="1" max="50" value="3"></label>
+          <label>Số vòng mỗi người<input id="testSpamCount" type="number" min="1" max="100" value="10"></label>
+          <label>Nghỉ giữa lệnh (giây)<input id="testSpamInterval" type="number" min="0" max="10" step="0.05" value="0.05"></label>
+          <button class="primary wide" id="testSpamBtn" data-test-run>Chạy spam</button>
+          <p id="testSpamEstimate" class="settings-help wide"></p>
+        </article>
+      </div>
+      <article class="panel test-gifts-panel">
+        <div class="page-heading"><div><h3>Test từng quà đã gán</h3><p class="settings-help">Mỗi lượt gửi đúng phần thưởng và số lượng của quà, kèm thông báo donate ưu tiên.</p></div><button id="testAllGiftsBtn" class="primary" data-test-run>Test toàn bộ quà</button></div>
+        <input id="testGiftSearch" class="search" placeholder="Tìm quà để thử…" aria-label="Tìm quà để thử">
+        <div id="testGiftList" class="test-gift-list"></div>
+      </article>
+      <article class="panel test-log-panel"><h3>Nhật ký kiểm thử</h3><p class="settings-help">Số lệnh gửi thành công không phải số mob còn sống. Dừng test chỉ ngừng gửi thêm; lệnh đã gửi và mob đã tạo vẫn do Minecraft xử lý.</p><pre id="testLogBox" class="test-log-box"></pre></article>
+    </section>
+
+    <section class="view" data-view="logs">
+      <div class="page-heading"><div><p class="eyebrow">NHẬT KÝ</p><h2>Trạng thái thời gian thực</h2></div><button id="clearLogsBtn">Xóa màn hình</button></div>
+      <pre id="logBox" class="log-box"></pre>
+    </section>
+  </main>
+
+  <div id="toastHost" class="toast-host"></div>
+  <script src="gift-settings.js?v=20260910-1"></script>
+  <script src="gift-catalog.js?v=20260913-1"></script>
+  <script src="runtime-settings.js?v=20260913-4"></script>
+  <script src="app.js?v=20260921-named-view"></script>
+</body>
+</html>

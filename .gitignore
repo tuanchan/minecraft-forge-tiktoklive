@@ -1,0 +1,44 @@
+# Local secrets and user state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+**/credentials*.json
+**/gui_state.json
+TikTokMobForge/bridge/config.json
+TikTokMobForge/bridge/discovered_gifts.json
+# Generated outputs and runtime data
+.gradle/
+.vscode/
+.idea/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+bin/
+obj/
+build/
+artifacts/
+backups/
+release/
+runtime/
+logs/
+*.log
+*.log.*
+*.bak
+*.tmp
+*.lock
+run/
+run-data/
+.pytest_cache/
+.DS_Store
+Thumbs.db
+
+# Local viewer databases and generated gift downloader output
+*.sqlite*
+*.db
+TikTokMobForge/tooltt/TikTokGiftDownloader_v2/TikTokGiftDownloader/output/

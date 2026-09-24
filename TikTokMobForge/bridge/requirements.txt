@@ -1,0 +1,6 @@
+TikTokLive==7.0.0
+elevenlabs==2.66.0
+python-dotenv==1.2.3
+edge-tts==7.2.8
+imageio-ffmpeg==0.6.0
+Pillow>=10,<13

@@ -1,0 +1,242 @@
+[
+  {
+    "gift_id": "5827",
+    "gift_name": "Ice Cream Cone",
+    "vietnamese_name": "Ice Cream Cone",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:arrow",
+    "amount": 16,
+    "level": 1
+  },
+  {
+    "gift_id": "7934",
+    "gift_name": "Heart Me",
+    "vietnamese_name": "Heart Me",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:iron_pickaxe",
+    "amount": 1,
+    "level": 1
+  },
+  {
+    "gift_id": "6093",
+    "gift_name": "Football",
+    "vietnamese_name": "Football",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:bread",
+    "amount": 8,
+    "level": 1
+  },
+  {
+    "gift_id": "6246",
+    "gift_name": "Thumbs Up",
+    "vietnamese_name": "Thumbs Up",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:torch",
+    "amount": 32,
+    "level": 1
+  },
+  {
+    "gift_id": "6247",
+    "gift_name": "Heart",
+    "vietnamese_name": "Heart",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:cooked_beef",
+    "amount": 8,
+    "level": 1
+  },
+  {
+    "gift_id": "6890",
+    "gift_name": "Love you",
+    "vietnamese_name": "Love you",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:iron_ingot",
+    "amount": 8,
+    "level": 1
+  },
+  {
+    "gift_id": "9340",
+    "gift_name": "Birthday Cake",
+    "vietnamese_name": "Birthday Cake",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:cake",
+    "amount": 1,
+    "level": 1
+  },
+  {
+    "gift_id": "9355",
+    "gift_name": "So Cute",
+    "vietnamese_name": "So Cute",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:cookie",
+    "amount": 16,
+    "level": 1
+  },
+  {
+    "gift_id": "10716",
+    "gift_name": "Blow a kiss",
+    "vietnamese_name": "Blow a kiss",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:gold_ingot",
+    "amount": 4,
+    "level": 1
+  },
+  {
+    "gift_id": "12355",
+    "gift_name": "Club Cheers",
+    "vietnamese_name": "Club Cheers",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:experience_bottle",
+    "amount": 8,
+    "level": 1
+  },
+  {
+    "gift_id": "13298",
+    "gift_name": "Wink Charm",
+    "vietnamese_name": "Wink Charm",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:shield",
+    "amount": 1,
+    "level": 1
+  },
+  {
+    "gift_id": "13651",
+    "gift_name": "Go Popular",
+    "vietnamese_name": "Go Popular",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:diamond",
+    "amount": 2,
+    "level": 1
+  },
+  {
+    "gift_id": "14543",
+    "gift_name": "Congratulations",
+    "vietnamese_name": "Congratulations",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:firework_rocket",
+    "amount": 16,
+    "level": 1
+  },
+  {
+    "gift_id": "15231",
+    "gift_name": "Love you so much",
+    "vietnamese_name": "Love you so much",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:emerald",
+    "amount": 4,
+    "level": 1
+  },
+  {
+    "gift_id": "15232",
+    "gift_name": "You're awesome",
+    "vietnamese_name": "You're awesome",
+    "coin_value": 1,
+    "action": "item",
+    "target": "minecraft:water_bucket",
+    "amount": 1,
+    "level": 1
+  },
+  {
+    "gift_id": "9139",
+    "gift_name": "Team Bracelet",
+    "vietnamese_name": "Team Bracelet",
+    "coin_value": 2,
+    "action": "item",
+    "target": "minecraft:iron_axe",
+    "amount": 1,
+    "level": 1
+  },
+  {
+    "gift_id": "8243",
+    "gift_name": "Cheer You Up",
+    "vietnamese_name": "Cheer You Up",
+    "coin_value": 9,
+    "action": "item",
+    "target": "minecraft:bow",
+    "amount": 1,
+    "level": 1
+  },
+  {
+    "gift_id": "8913",
+    "gift_name": "Rosa",
+    "vietnamese_name": "Rosa",
+    "coin_value": 10,
+    "action": "item",
+    "target": "minecraft:redstone",
+    "amount": 16,
+    "level": 1
+  },
+  {
+    "gift_id": "9875",
+    "gift_name": "Shamrock",
+    "vietnamese_name": "Shamrock",
+    "coin_value": 10,
+    "action": "item",
+    "target": "minecraft:lapis_lazuli",
+    "amount": 16,
+    "level": 1
+  },
+  {
+    "gift_id": "10138",
+    "gift_name": "Drip Brewing",
+    "vietnamese_name": "Drip Brewing",
+    "coin_value": 10,
+    "action": "item",
+    "target": "minecraft:cooked_chicken",
+    "amount": 16,
+    "level": 1
+  },
+  {
+    "gift_id": "5658",
+    "gift_name": "Perfume",
+    "vietnamese_name": "Perfume",
+    "coin_value": 20,
+    "action": "item",
+    "target": "minecraft:ender_pearl",
+    "amount": 4,
+    "level": 1
+  },
+  {
+    "gift_id": "5879",
+    "gift_name": "Doughnut",
+    "vietnamese_name": "Doughnut",
+    "coin_value": 30,
+    "action": "item",
+    "target": "minecraft:golden_carrot",
+    "amount": 16,
+    "level": 1
+  },
+  {
+    "gift_id": "5780",
+    "gift_name": "Bouquet Flower",
+    "vietnamese_name": "Bouquet Flower",
+    "coin_value": 30,
+    "action": "item",
+    "target": "minecraft:diamond_axe",
+    "amount": 1,
+    "level": 1
+  },
+  {
+    "gift_id": "19131",
+    "gift_name": "Chocolate",
+    "vietnamese_name": "Chocolate",
+    "coin_value": 10,
+    "action": "item",
+    "target": "minecraft:pumpkin_pie",
+    "amount": 8,
+    "level": 1
+  }
+]

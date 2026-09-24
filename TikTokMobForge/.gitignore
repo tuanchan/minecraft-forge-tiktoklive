@@ -1,0 +1,36 @@
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+
+# idea
+out
+*.ipr
+*.iws
+*.iml
+.idea
+
+# gradle
+build
+.gradle
+
+# other
+eclipse
+run
+bridge/.venv/
+bridge/.env
+runtime/
+bridge/logs/
+bridge/discovered_gifts.json
+GUI/__pycache__/
+GUI/logs/
+artifacts/
+Desktop/bin/
+Desktop/obj/
+
+# Files from Forge MDK
+forge_README.txt
+forge*changelog.txt
