@@ -1,2 +1,0 @@
-﻿from pathlib import Path
-p=Path('TikTokMobForge/web/index.html');s=p.read_text(encoding='utf-8');s=s.replace('Vị trí tính theo phần trăm trong bảng. Có thể kéo trực tiếp hoặc nhập số chính xác bên dưới.','Kéo cạnh để đổi chiều rộng/cao; kéo góc để thu/phóng cả bảng. Kéo avatar hoặc chữ để đổi vị trí, hoặc nhập số chính xác bên dưới.');s=s.replace('G + cuộn chuột đổi kích thước','G + cuộn chuột đổi kích thước (nhỏ nhất 5%)');p.write_text(s,encoding='utf-8')

@@ -1,2 +1,0 @@
-﻿from pathlib import Path
-p=Path('TikTokMobForge/tests/browser_reward_options_smoke.py');s=p.read_text(encoding='utf-8').replace('                assert browser.evaluate("tntInput.value") == \'4\'','                assert browser.evaluate("tntInput.value") == \'4\', browser.evaluate("({value:tntInput.value,connected:tntInput.isConnected,active:document.activeElement.outerHTML,rule:mappings.find(r=>r.target===\'spawn_tnt\')})")');p.write_text(s,encoding='utf-8')
