@@ -34,7 +34,14 @@ if __name__ == "__main__":
         subprocess.Popen([str(bridge_python), str(Path(__file__).resolve()), *sys.argv[1:]])
         raise SystemExit(0)
 CUSTOM_ASSET_DIR = WEB_DIR / "assets" / "custom"
-GUI_INSTANCE = hashlib.sha256((str(PROJECT_DIR).casefold() + "-troll-rewards-v1" + ("-desktop-v3-inventory" if "--desktop" in sys.argv else "")).encode()).hexdigest()
+# A reopened desktop window must use a backend loaded from the current Python files.
+# Otherwise the stable port silently reconnects to an older process and keeps old protocol code.
+_backend_revision = hashlib.sha256(b"".join(path.read_bytes() for path in (
+    WEB_DIR / "main.py", BRIDGE_DIR / "bridge.py", BRIDGE_DIR / "test_runner.py",
+    BRIDGE_DIR / "reward_options.py", BRIDGE_DIR / "milestones.py", WEB_DIR / "live_panel.py", WEB_DIR / "missions.py"
+))).hexdigest()[:12]
+GUI_INSTANCE = hashlib.sha256((str(PROJECT_DIR).casefold() + "-desktop-v4-" +
+    _backend_revision + ("-desktop" if "--desktop" in sys.argv else "")).encode()).hexdigest()
 GUI_PORT = 49152 + int(GUI_INSTANCE[:8], 16) % 10000
 GIFT_ASSET_INDEX = WEB_DIR / "assets" / "imagegift" / "gifts.json"
 sys.path.insert(0, str(GUI_DIR))
@@ -50,6 +57,7 @@ from runtime_settings import EVENT_KEYS, MOD_KEYS, config_file_lock
 from vietnamese_tts import VOICES as VIETNAMESE_VOICES
 
 from catalog_service import SPECIAL_REWARDS, _candidate_asset_directories, load_minecraft_catalog  # noqa: E402
+from reward_options import ENCHANTMENTS  # noqa: E402
 from config_service import (  # noqa: E402
     BRIDGE_CONFIG_PATH,
     DEFAULT_BRIDGE_CONFIG,
@@ -112,6 +120,7 @@ class Controller:
             "api_key": load_api_key(),
             "gifts": gifts,
             "catalog": {
+                "enchantments": ENCHANTMENTS,
                 "special": [asdict(item) for item in SPECIAL_REWARDS],
                 "mobs": [asdict(item) for item in mobs],
                 "items": [asdict(item) for item in items],
@@ -193,9 +202,12 @@ class Controller:
         for key in EVENT_KEYS:
             if key not in (payload.get("bridge") or {}) and key in mod:
                 bridge[key] = mod[key]
+        from milestones import settings as milestone_settings
+        bridge["milestones"] = milestone_settings(bridge)
         actions = bridge.get("gift_actions")
         if not isinstance(actions, list):
             raise ValueError("Danh sách quà không hợp lệ")
+        from reward_options import options_for
         cleaned_actions = []
         used: set[str] = set()
         for index, rule in enumerate(actions, 1):
@@ -217,6 +229,7 @@ class Controller:
                 "coin_value": self._number(rule.get("coin_value", 0), "Giá xu", 0, 1_000_000, True),
                 "action": action,
                 "target": target,
+                **options_for(rule),
                 "amount": self._number(rule.get("amount", 1), "Số lượng", 1, 100, True),
                 "level": self._number(rule.get("level", 0 if target.startswith("enchant_") else 1), "Cấp phần thưởng", 0 if target.startswith("enchant_") else 1, 255, True),
             })
@@ -312,6 +325,29 @@ class Controller:
         if not directory:
             raise ValueError("Thư mục Minecraft không được để trống")
         mod["bridge_port"] = bridge["minecraft_port"]
+        palette = {"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"}
+        for key in ("pinned_board_background", "pinned_board_border"):
+            if mod.get(key) not in palette:
+                raise ValueError(f"{key}: chọn màu Minecraft hợp lệ")
+        for key in ("pinned_board_author_color", "pinned_board_comment_color"):
+            if not isinstance(mod.get(key), str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", mod[key]):
+                raise ValueError(f"{key}: màu phải có dạng #RRGGBB")
+        for key, minimum, maximum in (
+            ("pinned_board_scale", 0.1, 2.0),
+            ("pinned_board_width", 0.7, 2.5),
+            ("pinned_board_height", 0.7, 2.5),
+            ("pinned_board_text_scale", 0.75, 1.4),
+            ("pinned_board_avatar_scale", 0.5, 1.8),
+            ("pinned_board_corner_radius", 0, 0.4),
+            ("pinned_board_avatar_x", 0, 100),
+            ("pinned_board_avatar_y", 0, 100),
+            ("pinned_board_rotation_speed", 0, 10),
+            ("pinned_board_author_x", 0, 100),
+            ("pinned_board_author_y", 0, 100),
+            ("pinned_board_content_x", 0, 100),
+            ("pinned_board_content_y", 0, 100),
+        ):
+            mod[key] = self._number(mod.get(key, DEFAULT_MOD_CONFIG[key]), key, minimum, maximum)
         for key in ("golem_teleport_distance", "wolf_teleport_distance"):
             mod[key] = self._number(mod.get(key, 20), key, 5, 128)
         for key, minimum, maximum in (("max_pending_events", 10, 100_000), ("max_interactions_per_tick", 1, 1000), ("notification_queue_size", 1, 10_000), ("max_mobs_per_user", 1, 1000), ("max_mobs_total", 1, 10_000), ("money_gun_arrow_count", 1, 64), ("universe_effect_level", 1, 10)):
@@ -531,6 +567,7 @@ class Controller:
             "keep_inventory_on": "totem_of_undying", "keep_inventory_off": "bone",
             "set_respawn": "red_bed", "kill_player": "netherite_sword",
             "sky_launch": "firework_rocket", "spawn_tnt": "tnt",
+            "lightning_player": "lightning_rod", "clear_tool_mobs": "netherite_sword",
             "armored_wolf": "wolf_armor",
             "divine_cat": "cat_spawn_egg",
             "netherite_armor_full4": "netherite_chestplate",
@@ -758,6 +795,19 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             if parsed.path == "/api/health":
                 return self.json_response({"instance": GUI_INSTANCE, "runtime_sync": True})
+            if parsed.path == "/api/missions":
+                import missions
+                return self.json_response(missions.snapshot(load_gui_state()["minecraft_directory"]))
+            if parsed.path == "/api/milestones":
+                from milestones import snapshot
+                return self.json_response(snapshot(load_json(BRIDGE_CONFIG_PATH, DEFAULT_BRIDGE_CONFIG),
+                                                   active=CONTROLLER.is_live_running()))
+            if parsed.path == "/api/live-panel":
+                import live_panel
+                return self.json_response(live_panel.snapshot())
+            if parsed.path == "/api/pinned-overlay":
+                from pinned_overlay import snapshot
+                return self.json_response({**snapshot(), "style": CONTROLLER.state()["mod"]})
             if parsed.path == "/api/state":
                 return self.json_response(CONTROLLER.state())
             if parsed.path == "/api/runtime-settings":
@@ -800,6 +850,12 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length) or b"{}")
+            if self.path == "/api/missions":
+                import missions
+                return self.json_response(missions.save(load_gui_state()["minecraft_directory"], payload))
+            if self.path == "/api/live-panel":
+                import live_panel
+                return self.json_response(live_panel.publish(payload))
             if self.path == "/api/save":
                 return self.json_response(CONTROLLER.save(payload))
             if self.path == "/api/action":

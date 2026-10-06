@@ -11,6 +11,7 @@ public sealed class MainForm : Form
     private readonly Label status = new() { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter, Text = "Đang mở bảng điều khiển…", ForeColor = Color.Black, BackColor = Color.White };
     private readonly CancellationTokenSource lifetime = new();
     private bool copyingPanel;
+    private PinOverlayForm? pinOverlay;
     private string? endpointFile;
     private string? appOrigin;
     private bool closing;
@@ -41,7 +42,7 @@ public sealed class MainForm : Form
                 if (browser.CoreWebView2 != null)
                 {
                     // Flush pending autosave before destroying the WebView.
-                    await browser.ExecuteScriptAsync("window.desktopSaveResult='pending';(async()=>{try{if(typeof autoSaveReady!=='undefined'&&autoSaveReady) await save(false);window.desktopSaveResult='ok';}catch(e){window.desktopSaveResult=String(e.message||e);}})();");
+                    await browser.ExecuteScriptAsync("window.desktopSaveResult='pending';(async()=>{try{if(typeof autoSaveReady!=='undefined'&&autoSaveReady) await save(false);window.desktopSaveResult='ok';}catch(e){window.desktopSaveResult=String(e.message||e);}})();").WaitAsync(TimeSpan.FromSeconds(2));
                     string result = "\"pending\"";
                     var deadline = DateTime.UtcNow.AddSeconds(8);
                     while (result == "\"pending\"" && DateTime.UtcNow < deadline)
@@ -51,23 +52,32 @@ public sealed class MainForm : Form
                     }
                     if (result != "\"ok\"")
                     {
-                        MessageBox.Show(this, "Chưa lưu được thay đổi. Hãy kiểm tra thông báo lưu trong ứng dụng.\n" + result, "Chưa thể đóng");
-                        closing = false;
-                        return;
+                        if (MessageBox.Show(this, "Chưa lưu được thay đổi cuối cùng.\n" + result +
+                            "\n\nĐóng tool và bỏ các thay đổi chưa lưu? Chọn Không để tiếp tục chỉnh sửa.",
+                            "Đóng tool", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) {
+                            closing = false;
+                            return;
+                        }
                     }
                 }
             }
             catch (Exception error)
             {
-                MessageBox.Show(this, "Không thể hoàn tất lưu trước khi đóng: " + error.Message, "Lỗi lưu");
-                closing = false;
-                return;
+                if (MessageBox.Show(this, "Không thể hoàn tất lưu: " + error.Message + "\n\nVẫn đóng tool? Các thay đổi chưa lưu sẽ bị bỏ.",
+                    "Đóng tool", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) {
+                    closing = false;
+                    return;
+                }
             }
+            try {
+                if (browser.CoreWebView2 != null)
+                    await browser.ExecuteScriptAsync("window.desktopClosing=true;window.onbeforeunload=null;").WaitAsync(TimeSpan.FromSeconds(2));
+            } catch (Exception) { }
             closeAllowed = true;
             lifetime.Cancel();
             Close();
         };
-        FormClosed += (_, _) => { lifetime.Cancel(); browser.Dispose(); if (endpointFile != null) { try { File.Delete(endpointFile); } catch (IOException) { } } };
+        FormClosed += (_, _) => { lifetime.Cancel(); pinOverlay?.Dispose(); browser.Dispose(); if (endpointFile != null) { try { File.Delete(endpointFile); } catch (IOException) { } } };
     }
 
     private static string FindProject()
@@ -141,6 +151,8 @@ public sealed class MainForm : Form
             };
             browser.CoreWebView2.Navigate(url + "?view=events&desktop=1");
             status.Visible = false;
+            pinOverlay = new PinOverlayForm();
+            await pinOverlay.InitializeAsync(environment, appOrigin);
         }
         catch (Exception error) when (!lifetime.IsCancellationRequested)
         {

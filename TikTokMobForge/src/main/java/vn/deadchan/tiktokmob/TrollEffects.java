@@ -30,33 +30,83 @@ import net.minecraftforge.event.server.ServerStoppingEvent;
 /** Gift actions run on the server thread; no changes to global mobGriefing. */
 final class TrollEffects {
     private static final String TOOL_CREEPER = "tiktokmob:no_block_explosion";
+    private static final String TOOL_TNT = "tiktokmob:tool_tnt";
+    private static final String PROTECT_PLAYERS = "tiktokmob:protect_players";
+    private static final String BREAK = "tiktokmob:break_blocks";
+    private static final String PROTECT = "tiktokmob:protect_blocks";
+    private static boolean creeperBreakBlocks, tntBreakBlocks = true;
+    static void explosionDefaults(boolean creeper, boolean tnt) {
+        creeperBreakBlocks = creeper; tntBreakBlocks = tnt;
+    }
+    static boolean breaksBlocks(Entity source, boolean fallback) {
+        return source.entityTags().contains(BREAK) || (!source.entityTags().contains(PROTECT) && fallback);
+    }
     private static final List<String> TRICKS = List.of("TROLL_CHICKEN", "TROLL_COBWEB", "TROLL_PUMPKIN",
         "TROLL_SLOWNESS", "TROLL_TELEPORT", "TROLL_CREEPER", "TROLL_ANVIL", "TROLL_HOTBAR", "TROLL_WARDEN");
     private record WebPosition(ServerLevel level, BlockPos pos) {}
     private record TemporaryWeb(BlockState original, long expires) {}
     private static final Map<WebPosition, TemporaryWeb> WEBS = new HashMap<>();
 
+    private record AnvilDrop(ServerPlayer player, double distance) {}
+    private static final Map<java.util.UUID, java.util.ArrayDeque<AnvilDrop>> ANVILS = new HashMap<>();
+    private static int anvilTicks;
+
     static void register() {
+        TemporaryPumpkins.register();
         ExplosionEvent.Detonate.BUS.addListener(event -> {
             Entity source = event.getExplosion().getDirectSourceEntity();
             if (source instanceof Creeper && source.entityTags().contains(TOOL_CREEPER)) {
-                event.getAffectedBlocks().clear();
+                if (!breaksBlocks(source, creeperBreakBlocks)) event.getAffectedBlocks().clear();
                 event.getAffectedEntities().removeIf(entity -> entity instanceof Creeper
                     && entity.entityTags().contains(TOOL_CREEPER));
+            } else if (source instanceof net.minecraft.world.entity.item.PrimedTnt
+                && source.entityTags().contains(TOOL_TNT)) {
+                if (!breaksBlocks(source, tntBreakBlocks)) event.getAffectedBlocks().clear();
+                if (source.entityTags().contains(PROTECT_PLAYERS))
+                    event.getAffectedEntities().removeIf(entity -> entity instanceof net.minecraft.world.entity.player.Player);
             }
         });
         ServerStoppingEvent.BUS.addListener(event -> {
             WEBS.forEach((position, web) -> restore(position, web));
             WEBS.clear();
+            ANVILS.clear();
         });
     }
 
-    static void markToolMob(Entity entity) {
+    static void markToolMob(Entity entity, String payload) {
         // Entity tags are saved with the mob, including charged creepers and chunk reloads.
-        if (entity instanceof Creeper) entity.addTag(TOOL_CREEPER);
+        if (entity instanceof Creeper) { entity.addTag(TOOL_CREEPER); markExplosionOverride(entity, payload); }
+    }
+
+    static void markToolTnt(Entity entity, String payload) {
+        entity.addTag(TOOL_TNT);
+        markExplosionOverride(entity, payload);
+        if (Boolean.FALSE.equals(RewardOptions.booleanOption(payload, "damage_players")))
+            entity.addTag(PROTECT_PLAYERS);
+        else entity.removeTag(PROTECT_PLAYERS);
+    }
+    private static void markExplosionOverride(Entity entity, String payload) {
+        Boolean value = RewardOptions.blockOverride(payload);
+        if (value != null) entity.addTag(value ? BREAK : PROTECT);
     }
 
     static void tick() {
+        TemporaryPumpkins.tick();
+        if (++anvilTicks % 10 == 0) {
+            var queues = ANVILS.values().iterator();
+            while (queues.hasNext()) {
+                var queue = queues.next();
+                var drop = queue.peek();
+                var player = drop.player();
+                if (!player.isAlive() || player.isRemoved() || player.isSpectator()
+                    || player.level().getServer().getPlayerList().getPlayer(player.getUUID()) != player) {
+                    queues.remove(); continue;
+                }
+                queue.remove();
+                anvil(player, drop.distance());
+                if (queue.isEmpty()) queues.remove();
+            }
+        }
         var iterator = WEBS.entrySet().iterator();
         while (iterator.hasNext()) {
             var entry = iterator.next();
@@ -74,25 +124,22 @@ final class TrollEffects {
     }
 
     static void apply(String trick, ServerPlayer player, Consumer<EntityType<?>> spawn, Consumer<ItemStack> storeItem) {
+        apply(trick, player, "", spawn, storeItem);
+    }
+
+    static void apply(String trick, ServerPlayer player, String payload, Consumer<EntityType<?>> spawn, Consumer<ItemStack> storeItem) {
         switch (trick) {
             case "TROLL_CHICKEN" -> {
                 spawn.accept(EntityTypes.CHICKEN);
                 player.playSound(SoundEvents.CHICKEN_EGG, 1, 1);
             }
-            case "TROLL_COBWEB" -> cobweb(player);
-            case "TROLL_PUMPKIN" -> {
-                ItemStack helmet = player.getItemBySlot(EquipmentSlot.HEAD);
-                if (!helmet.is(Items.CARVED_PUMPKIN)) {
-                    ItemStack previous = helmet.copy();
-                    player.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.CARVED_PUMPKIN));
-                    if (!previous.isEmpty()) storeItem.accept(previous);
-                    player.inventoryMenu.broadcastChanges();
-                }
-            }
+            case "TROLL_COBWEB" -> cobweb(player, payload);
+            case "TROLL_PUMPKIN" -> TemporaryPumpkins.start(player, RewardOptions.ticks(payload, "duration_seconds", 10));
             case "TROLL_SLOWNESS" -> player.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 200, 1));
             case "TROLL_TELEPORT" -> teleport(player);
             case "TROLL_CREEPER" -> spawn.accept(EntityTypes.CREEPER);
-            case "TROLL_ANVIL" -> anvil(player);
+            case "TROLL_ANVIL" -> ANVILS.computeIfAbsent(player.getUUID(), ignored -> new java.util.ArrayDeque<>())
+                .add(new AnvilDrop(player, RewardOptions.number(payload, "distance", 0, 0, 64)));
             case "TROLL_HOTBAR" -> {
                 List<ItemStack> stacks = new ArrayList<>();
                 for (int i = 0; i < 9; i++) stacks.add(player.getInventory().getItem(i));
@@ -112,21 +159,25 @@ final class TrollEffects {
         }
     }
 
-    private static void cobweb(ServerPlayer player) {
+    private static void cobweb(ServerPlayer player, String payload) {
         ServerLevel level = player.level();
-        BlockPos pos = player.blockPosition();
-        WebPosition key = new WebPosition(level, pos.immutable());
-        TemporaryWeb previous = WEBS.get(key);
-        if (previous != null && level.getBlockState(pos).is(Blocks.COBWEB)) {
-            WEBS.put(key, new TemporaryWeb(previous.original(), level.getGameTime() + 100));
-        } else if (level.getBlockState(pos).isAir()) {
-            BlockState original = level.getBlockState(pos);
-            if (level.setBlock(pos, Blocks.COBWEB.defaultBlockState(), 3)) {
-                WEBS.put(key, new TemporaryWeb(original, level.getGameTime() + 100));
+        double radius = RewardOptions.number(payload, "radius", 0, 0, 16);
+        int bound = (int)Math.ceil(radius);
+        long expires = level.getGameTime() + RewardOptions.ticks(payload, "duration_seconds", 5);
+        BlockPos center = player.blockPosition();
+        for (int x = -bound; x <= bound; x++) for (int z = -bound; z <= bound; z++) {
+            if (x * x + z * z > radius * radius) continue;
+            BlockPos pos = center.offset(x, 0, z);
+            if (!level.hasChunkAt(pos) || level.isOutsideBuildHeight(pos) || !level.getWorldBorder().isWithinBounds(pos)) continue;
+            WebPosition key = new WebPosition(level, pos.immutable());
+            TemporaryWeb previous = WEBS.get(key);
+            if (previous != null && level.getBlockState(pos).is(Blocks.COBWEB)) {
+                WEBS.put(key, new TemporaryWeb(previous.original(), Math.max(previous.expires(), expires)));
+            } else if (level.getBlockState(pos).isAir()) {
+                BlockState original = level.getBlockState(pos);
+                if (level.setBlock(pos, Blocks.COBWEB.defaultBlockState(), 3))
+                    WEBS.put(key, new TemporaryWeb(original, expires));
             }
-        } else {
-            // Do not replace a player's build or fluid when no air cell is available.
-            player.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 100, 4));
         }
     }
 
@@ -158,15 +209,18 @@ final class TrollEffects {
         player.sendSystemMessage(Component.literal("TikTok: không có chỗ trống an toàn trong 5–10 block để dịch chuyển."));
     }
 
-    private static void anvil(ServerPlayer player) {
+    private static void anvil(ServerPlayer player, double distance) {
+        double angle = player.getRandom().nextDouble() * Math.PI * 2;
+        double x = player.getX() + Math.cos(angle) * distance;
+        double z = player.getZ() + Math.sin(angle) * distance;
         ServerLevel level = player.level();
         for (int height = 5; height >= 2; height--) {
-            BlockPos pos = BlockPos.containing(player.getX(), player.getY() + height, player.getZ());
+            BlockPos pos = BlockPos.containing(x, player.getY() + height, z);
             if (level.isOutsideBuildHeight(pos) || !level.getWorldBorder().isWithinBounds(pos)
                 || !level.hasChunkAt(pos) || !level.getBlockState(pos).isAir()) continue;
             FallingBlockEntity falling = FallingBlockEntity.fall(level, pos, Blocks.ANVIL.defaultBlockState());
             // Preserve the exact player X/Z rather than snapping to the block centre.
-            falling.setPos(player.getX(), player.getY() + height, player.getZ());
+            falling.setPos(x, player.getY() + height, z);
             falling.setDeltaMovement(Vec3.ZERO);
             falling.setHurtsEntities(2, 8);
             falling.dropItem = false;

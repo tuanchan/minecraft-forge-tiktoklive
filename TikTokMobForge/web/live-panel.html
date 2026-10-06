@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panel LIVE</title>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="monochrome.css"><link rel="stylesheet" href="panel-settings.css">
+<link rel="stylesheet" href="milestones.css?v=6"><style>
+html,body{margin:0!important;padding:0!important;min-width:0!important;width:100%;height:100%;overflow:hidden!important;background:transparent!important}
+#panel{position:absolute;left:0;top:0;width:1200px;max-width:none;min-height:0;padding:12px!important;transform-origin:top left;border:0!important;border-radius:0!important;background:#fff!important;box-shadow:none!important}
+#panel .live-grid{grid-template-columns:minmax(0,var(--panel-split,26%)) minmax(0,1fr)!important;margin:0!important}
+#panel .event-cards,#panel .gift-preview{grid-template-columns:repeat(auto-fit,minmax(min(100%,max(var(--panel-width,80px),var(--panel-mob,76px),var(--panel-gift,38px),var(--panel-event,24px))),1fr))!important}
+#panel button,#panel .link{display:none!important}
+#panel:empty{display:none}
+</style></head><body><section id="panel" class="minecraft-stage"></section><script src="milestone-live.js?v=3"></script><script src="live-panel.js"></script></body></html>

@@ -12,8 +12,9 @@
   <link rel="preload" href="/assets/comment.png" as="image">
   <link rel="preload" href="/assets/share.png" as="image">
   <link rel="preload" href="/assets/like.png" as="image">
-  <link rel="stylesheet" href="styles.css?v=20260908-16">
+  <link rel="stylesheet" href="styles.css?v=20260926-board-1">
   <link rel="stylesheet" href="/monochrome.css?v=20260922-mapping-layout">
+  <link rel="stylesheet" href="milestones.css?v=6">
 </head>
 <body>
   <main class="shell">
@@ -22,6 +23,7 @@
         <button class="tab active" data-tab="live">Panel LIVE</button>
         <button class="tab" data-tab="events">Tương tác</button>
         <button class="tab" data-tab="gifts">Quà tặng</button>
+        <button class="tab" data-tab="missions">Nhiệm vụ</button>
         <button class="tab" data-tab="voicevox">VOICEVOX / Cảm ơn quà</button>
         <button class="tab" data-tab="settings">Cài đặt</button>
         <button class="tab" data-tab="tests">Kiểm thử</button>
@@ -44,51 +46,66 @@
           <span class="panel-live-kicker">MINECRAFT LIVE CONTROL</span>
           <strong>Panel tương tác trực tiếp</strong>
         </div>
-        <div class="actions"><button id="copyPanelBtn" type="button">Sao chép ảnh panel</button></div>
+        <div class="actions"><button id="panelSettingsBtn" type="button" title="Căn chỉnh panel" aria-label="Căn chỉnh panel" aria-expanded="false" aria-controls="panelSettingsBox">⚙</button><button id="copyPanelLinkBtn" type="button" title="Dán vào nguồn Liên kết trong TikTok LIVE Studio trên cùng máy">Sao chép link</button><button id="copyPanelBtn" type="button">Sao chép ảnh panel</button></div>
       </div>
       <div class="live-grid">
         <article class="neon cyan">
           <div class="section-title themed-title">
-            <div><span>Tương tác cơ bản</span><small>Mỗi tương tác sẽ tạo mob trong Minecraft!</small></div>
+            <div><span>Tương tác cơ bản</span><small>Mỗi tương tác có thể trao phần thưởng hoặc trao quà trong Minecraft!</small></div>
           </div>
-          <div id="eventCards" class="event-cards"></div>
+          <div id="eventCards" class="event-cards"></div><div id="interactionGoals" class="milestone-panel"></div>
         </article>
         <article class="neon pink">
           <div class="section-title themed-title">
             <div><span>Quà tặng đặc biệt</span><small>Gửi quà để nhận vật phẩm giá trị trong Minecraft!</small></div>
           </div>
-          <div id="giftPreview" class="gift-preview"></div>
+          <div id="giftPreview" class="gift-preview"></div><div id="coinGoals" class="milestone-panel"></div>
         </article>
       </div>
     </section>
 
     <section class="view" data-view="events">
-      <div class="page-heading"><div><p class="eyebrow">TƯƠNG TÁC</p><h2>Mob theo sự kiện</h2></div><p>Chọn mob, số lượng và giới hạn ngay trong từng nhóm.</p></div>
+      <div class="page-heading"><div><p class="eyebrow">TƯƠNG TÁC</p><h2>Mob / quà theo sự kiện</h2></div><p>Chọn mob hoặc quà, số lượng và giới hạn ngay trong từng nhóm.</p></div>
       <div id="eventsHome"><div id="interactionControls">
+      <h3>Tương tác riêng từng người</h3>
       <div id="eventEditors" class="editor-grid"></div>
         <div class="event-tuning" data-event="view">
-          <label><input id="view_enabled" data-config="bridge" type="checkbox"> Bật tạo mob khi có người xem</label>
+          <label><input id="view_enabled" data-config="bridge" type="checkbox"> Bật trao phần thưởng khi có người xem</label>
           <label>Lặp lại sau (giây)<input id="view_interval_seconds" data-config="bridge" type="number" min="1" max="86400"></label>
-          <label>Mob tối đa mỗi đợt View<input id="view_max_mobs_per_round" data-config="bridge" type="number" min="1" max="1000"></label>
+          <label>Phần thưởng tối đa mỗi đợt View<input id="view_max_mobs_per_round" data-config="bridge" type="number" min="1" max="1000"></label>
           <small>Mob mang tên người vào LIVE hoặc tương tác. Lặp lại theo thời gian hiện diện ước lượng; không có danh sách đầy đủ người rời phòng. Ngừng theo dõi sau 5 phút không nhận tín hiệu của người đó (hoặc chu kỳ + 90 giây nếu dài hơn). Người chỉ xem im lặng có thể không được nhận diện.</small>
         </div>
       <div class="event-tuning" data-event="like">
-        <label>Số mob mỗi mốc tim<input id="like_spawn_count" type="number" min="1" max="100"></label>
+        <label>Số phần thưởng mỗi mốc tim<input id="like_spawn_count" type="number" min="1" max="100"></label>
       </div>
       <div class="event-tuning" data-event="comment">
-        <label>Số bình luận được tạo mob / người<input id="comment_limit" type="number" min="1"></label>
+        <label>Số bình luận được trao phần thưởng / người<input id="comment_limit" type="number" min="1"></label>
         <label>Thời gian chờ riêng (giây)<input id="comment_cooldown_seconds" type="number" min="1" step="0.5"></label>
       </div>
       <div class="event-tuning" data-event="share">
-        <label>Số chia sẻ được tạo mob / người<input id="share_limit" type="number" min="1"></label>
+        <label>Số chia sẻ được trao phần thưởng / người<input id="share_limit" type="number" min="1"></label>
         <label>Thời gian chờ riêng (giây)<input id="share_cooldown_seconds" type="number" min="1" step="0.5"></label>
       </div>
-      <p class="interaction-note">Giới hạn tính riêng theo tài khoản và loại tương tác. Hai người gửi cùng lúc đều được tạo mob; người này đang chờ không khóa người khác.</p>
+      <p class="interaction-note">Giới hạn tính riêng theo tài khoản và loại tương tác. Hai người gửi cùng lúc đều được trao phần thưởng; người này đang chờ không khóa người khác.</p>
+      <h3>Mốc tổng LIVE · phần thưởng cộng thêm</h3>
+      <div id="milestoneEditors"></div>
       </div></div>
+    </section>
+
+    <section class="view" data-view="missions">
+      <div class="page-heading"><div><p class="eyebrow">TIẾN ĐỘ TRONG GAME</p><h2>Nhiệm vụ</h2></div><button id="missionReload" type="button">Tải lại</button></div>
+      <div class="panel"><label class="mission-check"><input id="missionsEnabled" type="checkbox"> Bật nhiệm vụ</label>
+        <p>Tiến độ riêng từng người chơi, lưu cùng thế giới. Đào kim cương tính khối quặng thường và quặng đá sâu; giết mob chỉ tính mạng do người chơi hạ. Đủ mục tiêu sẽ giữ ở mức hoàn thành; bị trừ có thể làm lại.</p>
+        <div class="actions"><button id="missionDiamond" type="button">+ Đào kim cương</button><button id="missionKill" type="button">+ Giết mob</button><span id="missionSaveStatus" role="status"></span></div>
+      </div>
+      <div id="missionEditors"></div>
+      <article class="panel"><h3>Tiến độ trực tiếp</h3><p id="missionOnline"></p><div id="missionProgress"></div></article>
+      <article class="panel"><h3>Quà trừ tiến độ</h3><p>Trong tab Quà tặng, chọn hiệu ứng <strong>Trừ tiến độ nhiệm vụ</strong>, chọn một nhiệm vụ hoặc tất cả và nhập số điểm trừ mỗi lượt. Số lượng quà và combo nhân số lượt trừ; tiến độ có thể xuống số âm.</p><button id="missionGifts" type="button">Mở Quà tặng</button></article>
     </section>
 
     <section class="view" data-view="gifts">
       <div class="page-heading"><div><p class="eyebrow">KÉO VÀ THẢ</p><h2>Ghép quà với phần thưởng</h2></div><div><button id="addGiftBtn" class="primary">+ Thêm quà</button></div></div>
+      <div id="coinMilestoneEditor"></div>
       <div class="gift-workspace">
         <aside class="panel source-panel">
           <h3>Quà trong phòng LIVE</h3>
@@ -104,7 +121,7 @@
         </section>
         <aside class="panel source-panel">
           <h3>Mob và vật phẩm</h3>
-          <input id="rewardSearch" class="search" placeholder="Tìm mob, vật phẩm hoặc ID…">
+          <input id="rewardSearch" class="search" placeholder="Tìm mob, vật phẩm, phù phép hoặc ID…">
           <div class="chips"><button class="chip active" data-filter="all">Tất cả</button><button class="chip" data-filter="mob">Mob</button><button class="chip" data-filter="item">Vật phẩm</button><button class="chip" data-filter="special">Đặc biệt</button></div>
           <small>Quà chơi khăm nằm trong Đặc biệt. Kéo hiệu ứng vào quà để gán; mức xu chỉ là gợi ý.</small>
           <div id="rewardSource" class="reward-source"></div>
@@ -120,6 +137,7 @@
         <button type="button" role="tab" id="tab-settingsMobs" data-settings-tab="settingsMobs" aria-controls="settingsMobs" aria-selected="false" class="setting-tab">Mob</button>
         <button type="button" role="tab" id="tab-settingsDisplay" data-settings-tab="settingsDisplay" aria-controls="settingsDisplay" aria-selected="false" class="setting-tab">Hàng thông báo</button>
         <button type="button" role="tab" id="tab-settingsContent" data-settings-tab="settingsContent" aria-controls="settingsContent" aria-selected="false" class="setting-tab">Nội dung hiển thị</button>
+        <button type="button" role="tab" id="tab-settingsPinnedBoard" data-settings-tab="settingsPinnedBoard" aria-controls="settingsPinnedBoard" aria-selected="false" class="setting-tab">Bảng bình luận ghim</button>
         <button type="button" role="tab" id="tab-settingsPosition" data-settings-tab="settingsPosition" aria-controls="settingsPosition" aria-selected="false" class="setting-tab">Vị trí</button>
         <button type="button" role="tab" id="tab-settingsRewards" data-settings-tab="settingsRewards" aria-controls="settingsRewards" aria-selected="false" class="setting-tab">Hiệu ứng quà</button>
         <button type="button" role="tab" id="tab-settingsVoice" data-settings-tab="settingsVoice" aria-controls="settingsVoice" aria-selected="false" class="setting-tab">Giọng comment</button>
@@ -149,6 +167,8 @@
           <label>Vị trí triệu hồi<select id="spawn_direction"><option value="front">Trước mặt</option><option value="right">Bên phải</option><option value="left">Bên trái</option><option value="back">Đằng sau</option><option value="random">Ngẫu nhiên</option></select></label>
           <label>Độ cao sinh mob<input id="spawn_height_offset" type="number" step="0.5"></label>
           <label>Hàng đợi xử lý gameplay<input id="max_pending_events" type="number" min="10"></label>
+          <label class="check"><input id="creeper_break_blocks" data-config="mod" type="checkbox"> Creeper tool phá khối</label>
+          <label class="check"><input id="tnt_break_blocks" data-config="mod" type="checkbox"> TNT tool phá khối</label>
           <label class="check"><input id="enderman_targets_player" type="checkbox"> Enderman nhắm người chơi</label>
           <label class="check"><input id="mobs_persistent" type="checkbox"> Chống biến mất tự nhiên</label>
           <label class="check wide"><input id="show_countdown_in_name" type="checkbox"> Hiện đếm ngược trong tên mob</label>
@@ -186,7 +206,32 @@
           <label>Độ dài comment hiển thị<input id="display_comment_max_characters" data-config="bridge" type="number" min="1" max="96"></label>
           <label class="check"><input id="display_limited_comments" data-config="bridge" type="checkbox"> Hiện cả comment đang bị giới hạn</label>
           <label class="check wide"><input id="display_limited_shares" data-config="bridge" type="checkbox"> Hiện cả share đang bị giới hạn</label>
-          <p class="settings-help wide">Các nút hiển thị chỉ điều khiển thông báo. Giới hạn tạo mob vẫn áp dụng. Nội dung dài tự thu nhỏ để vừa màn hình Minecraft.</p>
+          <p class="settings-help wide">Các nút hiển thị chỉ điều khiển thông báo. Giới hạn trao phần thưởng vẫn áp dụng. Nội dung dài tự thu nhỏ để vừa màn hình Minecraft.</p>
+        </article>
+        <article id="settingsPinnedBoard" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsPinnedBoard" hidden class="panel form-grid">
+          <h3>Bảng bình luận ghim 3D · WebView</h3>
+          <p class="settings-help wide">Kéo avatar và cụm chữ ngay trong bảng xem thử. Màu, kích thước và vị trí tự lưu; Minecraft áp dụng khi world đang mở.</p>
+          <label>Màu nền<select id="pinned_board_background" data-config="mod"><option value="black">Đen</option><option value="gray">Xám</option><option value="light_gray">Xám sáng</option><option value="white">Trắng</option><option value="blue">Xanh đậm</option><option value="light_blue">Xanh sáng</option><option value="cyan">Cyan</option><option value="purple">Tím</option><option value="magenta">Hồng tím</option><option value="pink">Hồng</option><option value="red">Đỏ</option><option value="orange">Cam</option><option value="yellow">Vàng</option><option value="lime">Xanh nõn</option><option value="green">Xanh lá</option><option value="brown">Nâu</option></select></label>
+          <label>Màu viền<select id="pinned_board_border" data-config="mod"><option value="light_blue">Xanh sáng</option><option value="cyan">Cyan</option><option value="magenta">Hồng tím</option><option value="pink">Hồng</option><option value="yellow">Vàng</option><option value="lime">Xanh nõn</option><option value="white">Trắng</option><option value="black">Đen</option><option value="gray">Xám</option><option value="light_gray">Xám sáng</option><option value="blue">Xanh đậm</option><option value="purple">Tím</option><option value="red">Đỏ</option><option value="orange">Cam</option><option value="green">Xanh lá</option><option value="brown">Nâu</option></select></label>
+          <label>Màu tên người dùng<input id="pinned_board_author_color" data-config="mod" type="color"></label>
+          <label>Màu bình luận<input id="pinned_board_comment_color" data-config="mod" type="color"></label>
+          <label>Kích thước bảng<input id="pinned_board_scale" data-config="mod" type="number" min="0.1" max="2" step="0.05"></label>
+          <label>Chiều rộng bảng (×)<input id="pinned_board_width" data-config="mod" type="number" min="0.7" max="2.5" step="0.05"></label>
+          <label>Chiều cao bảng (×)<input id="pinned_board_height" data-config="mod" type="number" min="0.7" max="2.5" step="0.05"></label>
+          <label>Cỡ chữ<input id="pinned_board_text_scale" data-config="mod" type="number" min="0.75" max="1.4" step="0.05"></label>
+          <label>Cỡ avatar<input id="pinned_board_avatar_scale" data-config="mod" type="number" min="0.5" max="1.8" step="0.05"></label>
+          <label>Độ bo góc<input id="pinned_board_corner_radius" data-config="mod" type="number" min="0" max="0.4" step="0.01"></label>
+          <div class="wide board-preview-shell"><div id="pinnedBoardPreview" aria-label="Kéo avatar hoặc bình luận để đổi bố cục"><strong id="pinnedBoardTitle">BÌNH LUẬN GHIM</strong><i class="board-pin" aria-hidden="true"></i><span id="pinnedBoardAuthor" data-board-drag="author">@Admin thử bảng</span><div id="pinnedBoardContent" data-board-drag="content"><p>Xin chào, chúc buổi LIVE vui vẻ!</p></div><div id="pinnedBoardAvatar" data-board-drag="avatar">A</div><span class="board-resize board-resize-n" data-board-resize="n" title="Kéo để đổi kích thước"></span><span class="board-resize board-resize-s" data-board-resize="s" title="Kéo để đổi kích thước"></span><span class="board-resize board-resize-e" data-board-resize="e" title="Kéo để đổi kích thước"></span><span class="board-resize board-resize-w" data-board-resize="w" title="Kéo để đổi kích thước"></span><span class="board-resize board-resize-ne" data-board-resize="ne" title="Kéo để đổi kích thước"></span><span class="board-resize board-resize-nw" data-board-resize="nw" title="Kéo để đổi kích thước"></span><span class="board-resize board-resize-se" data-board-resize="se" title="Kéo để đổi kích thước"></span><span class="board-resize board-resize-sw" data-board-resize="sw" title="Kéo để đổi kích thước"></span></div></div>
+          <p class="settings-help wide">Kéo cạnh để đổi chiều rộng/cao; kéo góc để thu/phóng cả bảng. Kéo avatar hoặc chữ để đổi vị trí, hoặc nhập số chính xác bên dưới.</p>
+          <label>Avatar ngang (%)<input id="pinned_board_avatar_x" data-config="mod" type="number" min="0" max="100" step="1"></label>
+          <label>Avatar dọc (%)<input id="pinned_board_avatar_y" data-config="mod" type="number" min="0" max="100" step="1"></label>
+          <label>Tốc độ xoay (×)<input id="pinned_board_rotation_speed" data-config="mod" type="number" min="0" max="10" step="0.1"></label>
+          <p class="settings-help">0 = dừng xoay; 1 = tốc độ cũ; 2 = nhanh gấp đôi. Kéo tên và bình luận độc lập trên bản xem trước.</p>
+          <label>Tên ngang (%)<input id="pinned_board_author_x" data-config="mod" type="number" min="0" max="100" step="1"></label>
+          <label>Tên dọc (%)<input id="pinned_board_author_y" data-config="mod" type="number" min="0" max="100" step="1"></label>
+          <label>Bình luận ngang (%)<input id="pinned_board_content_x" data-config="mod" type="number" min="0" max="100" step="1"></label>
+          <label>Bình luận dọc (%)<input id="pinned_board_content_y" data-config="mod" type="number" min="0" max="100" step="1"></label>
+          <p class="settings-help wide">WebView vẽ nội dung lên bảng 3D trong Minecraft. Mở MO_GUI.bat để chạy bộ vẽ. Giữ G để kéo, G + cuộn chuột đổi kích thước (nhỏ nhất 5%); Shift + G + cuộn chuột chỉnh gần/xa (2–20 block); chạm G dừng quay, G hai lần quay tiếp; F ghim vị trí; ngắm vào bảng rồi nhấn X để xóa riêng bảng đó. Bình luận mới giữ nguyên trạng thái quay/ghim của từng bảng. Ngắm bảng cần chỉnh rồi giữ G để kéo hoặc nhấn F để ghim/bỏ ghim. Chiều rộng và chiều cao chỉnh riêng tại đây.</p>
         </article>
         <article id="settingsPosition" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsPosition" hidden class="panel form-grid">
           <h3>Cách hiển thị từng loại tương tác</h3>
@@ -252,7 +297,7 @@
           <label class="check wide"><input id="live_comments_only" data-config="bridge" type="checkbox"> Chỉ đọc bình luận LIVE, không cần Minecraft (tắt tương tác và cảm ơn quà)</label>
           <label class="check"><input id="tts_enabled" type="checkbox"> Bật đọc comment</label>
           <label class="check"><input id="tts_read_username" type="checkbox"> Đọc tên người comment</label>
-          <label class="check wide"><input id="tts_read_limited_comments" data-config="bridge" type="checkbox"> Đọc cả comment bị giới hạn tạo mob</label>
+          <label class="check wide"><input id="tts_read_limited_comments" data-config="bridge" type="checkbox"> Đọc cả comment bị giới hạn trao phần thưởng</label>
           <label>Âm lượng (0 tắt tiếng — 1 tối đa)<input id="tts_volume" data-config="bridge" type="number" min="0" max="1" step="0.05"></label>
           <label>Độ ổn định (Stability)<input id="tts_stability" type="number" min="0" max="1" step="0.05"></label>
           <label>Độ giống giọng gốc<input id="tts_similarity_boost" type="number" min="0" max="1" step="0.05"></label>
@@ -273,7 +318,7 @@
           <p id="ttsQueueHelp" class="settings-help wide"></p>
           <label>Im lặng cuối câu (giây)<input id="tts_trailing_silence_seconds" type="number" min="0" max="30" step="0.1"></label>
       </article>
-      <section id="settingsInteractions" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsInteractions" hidden class="settings-interactions"><h3>Mob theo tương tác, số lượng và chống spam</h3><div id="settingsEventsHome"></div></section>
+      <section id="settingsInteractions" data-settings-panel role="tabpanel" aria-labelledby="tab-settingsInteractions" hidden class="settings-interactions"><h3>Mob / quà theo tương tác, số lượng và chống spam</h3><div id="settingsEventsHome"></div></section>
     </section>
 
     <section class="view" data-view="voicevox">
@@ -331,6 +376,14 @@
       <p class="settings-help">Mở world Minecraft có mod để nhận lệnh. Không cần bật TikTok LIVE. Test gửi trực tiếp theo cấu hình hiện tại, bỏ qua bước chờ tim và chống spam của bridge; giới hạn mob trong game vẫn áp dụng.</p>
       <div class="test-progress panel"><strong id="testStatus" role="status">Chưa chạy bài test</strong><progress id="testProgress" value="0" max="1"></progress></div>
       <div class="settings-grid test-grid">
+        <article class="panel form-grid test-pin-panel">
+          <h3>Bình luận ghim 3D · WebView</h3>
+          <label class="wide">Tên người bình luận<input id="testPinAuthor" value="Admin thử bảng" maxlength="64"></label>
+          <label class="wide">Nội dung ghim<textarea id="testPinContent" rows="4" maxlength="200" placeholder="Nhập nội dung sẽ hiện trên bảng overlay"></textarea></label>
+          <button class="primary" id="testPinBtn" data-test-run>Thử ghim bảng</button>
+          <button id="testUnpinBtn" data-test-run>Cách xóa bảng</button>
+          <p class="settings-help wide">WebView vẽ nội dung lên bảng 3D trong Minecraft. Mở MO_GUI.bat để chạy bộ vẽ. Giữ G để kéo, G + cuộn chuột đổi kích thước (nhỏ nhất 5%); Shift + G + cuộn chuột chỉnh gần/xa (2–20 block); chạm G dừng quay, G hai lần quay tiếp; F ghim vị trí; ngắm vào bảng rồi nhấn X để xóa riêng bảng đó. Bình luận mới giữ nguyên trạng thái quay/ghim của từng bảng. Ngắm bảng cần chỉnh rồi giữ G để kéo hoặc nhấn F để ghim/bỏ ghim. Chiều rộng và chiều cao chỉnh riêng tại đây.</p>
+        </article>
         <article class="panel form-grid">
           <h3>Thông số cho test mob / quà</h3>
           <label class="wide">Tên hiển thị người thử<input id="testName" value="Test User" maxlength="40"></label>
@@ -377,7 +430,13 @@
   <div id="toastHost" class="toast-host"></div>
   <script src="gift-settings.js?v=20260910-1"></script>
   <script src="gift-catalog.js?v=20260913-1"></script>
-  <script src="runtime-settings.js?v=20260913-4"></script>
-  <script src="app.js?v=20260921-named-view"></script>
+  <script src="runtime-settings.js?v=rewards-20260913-4"></script>
+  <script src="panel-settings.js?v=20260925-1"></script>
+  <script src="pin-layout.js?v=20260927"></script>
+  <script src="panel-link.js?v=20260927"></script>
+  <script src="milestone-live.js?v=3"></script>
+  <script src="milestones.js?v=6"></script>
+  <script src="missions.js?v=1"></script>
+  <script src="app.js?v=20260928-clean-captions"></script>
 </body>
 </html>

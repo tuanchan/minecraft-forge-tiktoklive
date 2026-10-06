@@ -1,4 +1,7 @@
 {
   "key.tiktokmob.gift_bag": "Open gift bag",
-  "key.tiktokmob.settings": "Open TikTok Mob settings"
+  "key.tiktokmob.settings": "Open TikTok Mob settings",
+  "key.tiktokmob.pin_grab": "G: pause; double G: orbit; hold G: move board",
+  "key.tiktokmob.pin_board": "Press F to pin or unpin the board in place",
+  "key.tiktokmob.pin_delete": "Press X to delete the pinned comment"
 }

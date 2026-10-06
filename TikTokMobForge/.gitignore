@@ -34,3 +34,14 @@ Desktop/obj/
 # Files from Forge MDK
 forge_README.txt
 forge*changelog.txt
+
+bridge/milestone-progress.json
+
+# Local caches and cleanup archive
+__pycache__/
+*.py[cod]
+/backups/cleanup-*/
+/logs/
+/GUI/tmp*
+/GUI/live-panel.json
+/bridge/cache/

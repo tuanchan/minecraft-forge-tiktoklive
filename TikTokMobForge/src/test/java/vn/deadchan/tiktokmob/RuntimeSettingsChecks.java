@@ -22,7 +22,7 @@ final class RuntimeSettingsChecks {
                 catch (IllegalArgumentException expected) { rejected = true; }
                 check(rejected && Files.readString(path).equals(before), "invalid patch cannot change disk: " + bad);
             }
-            check(RuntimeSettings.FIELDS.size() == 33, "all requested fields exposed");
+            check(RuntimeSettings.FIELDS.size() == 35, "all requested fields exposed");
             RuntimeSettings.savePatch(path, JsonParser.parseString("{\"golem_teleport_distance\":35,\"wolf_teleport_distance\":12}").getAsJsonObject());
             var guards = RuntimeSettings.read(path);
             check(guards.get("golem_teleport_distance").getAsDouble() == 35
@@ -34,6 +34,13 @@ final class RuntimeSettingsChecks {
                     try { RuntimeSettings.merge(guards, invalid); }
                     catch (IllegalArgumentException expected) { rejected = true; }
                     check(rejected, "invalid guard distance rejected");
+                }
+            }
+            for (String key : new String[]{"creeper_break_blocks", "tnt_break_blocks"}) {
+                for (boolean enabled : new boolean[]{true, false}) {
+                    JsonObject patch = new JsonObject(); patch.addProperty(key, enabled);
+                    RuntimeSettings.savePatch(path, patch);
+                    check(RuntimeSettings.read(path).get(key).getAsBoolean() == enabled, "explosion toggle persists");
                 }
             }
             JsonObject toggle = new JsonObject();

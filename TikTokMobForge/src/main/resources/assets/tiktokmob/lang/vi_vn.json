@@ -1,4 +1,7 @@
 {
   "key.tiktokmob.gift_bag": "Mở túi quà TikTok",
-  "key.tiktokmob.settings": "Mở cài đặt TikTok Mob"
+  "key.tiktokmob.settings": "Mở cài đặt TikTok Mob",
+  "key.tiktokmob.pin_grab": "G: dừng bảng; G hai lần: quay tiếp; giữ G: kéo bảng",
+  "key.tiktokmob.pin_board": "Nhấn F để ghim hoặc bỏ ghim bảng tại chỗ",
+  "key.tiktokmob.pin_delete": "Nhấn X để xóa bình luận ghim"
 }

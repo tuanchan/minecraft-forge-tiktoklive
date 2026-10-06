@@ -1,5 +1,6 @@
 """Configurable offline interaction tests using the production bridge protocol."""
 import math
+from reward_options import reward_payload, mob_payload
 import re
 import threading
 import time
@@ -23,6 +24,16 @@ def number(value, label, minimum, maximum, integer=True):
 
 def build_plan(config, request):
     mode = request.get("mode")
+    if mode in ("pin", "pin_clear"):
+        if config.get("live_comments_only", False):
+            raise ValueError("Hãy tắt chế độ chỉ đọc bình luận để thử bảng trong Minecraft")
+        author = " ".join(str(request.get("pin_author") or "Admin thử bảng").split())[:64]
+        content = " ".join(str(request.get("pin_text") or "").split())
+        if mode == "pin" and not content:
+            raise ValueError("Hãy nhập nội dung bình luận ghim")
+        if len(content) > 200:
+            raise ValueError("Nội dung ghim tối đa 200 ký tự")
+        return [("pin_comment", content if mode == "pin" else "", author, "test-pin", "", False)], 0
     if mode not in ("mob", "event", "all_mobs", "spam", "gift", "all_gifts"):
         raise ValueError("Bài kiểm thử không hợp lệ")
     users = number(request.get("users", 1), "Số người", 1, 50)
@@ -63,7 +74,7 @@ def build_plan(config, request):
                     kind = gift.get("action", "special")
                     reward = gift.get("target", "")
                     level = number(gift.get("level", 0 if reward.startswith("enchant_") else 1), "Cấp quà", 0, 255)
-                    add(reward if kind == "special" else kind, str(level) if kind == "special" else reward,
+                    add(reward if kind == "special" else kind, reward_payload(gift) if kind == "special" else mob_payload(gift) if kind == "mob" else reward,
                         gift.get("amount", 1), user, f"Test quà: {gift.get('vietnamese_name') or gift.get('gift_name')}", True)
             elif mode == "mob":
                 add("mob", target, 1, user, "Test triệu hồi")

@@ -74,3 +74,10 @@ tasks.register('verifyGiftBag', JavaExec) {
 // The storage checks use Minecraft's real registry bootstrap in a standalone main.
 tasks.named('test', Test) { failOnNoDiscoveredTests = false }
 tasks.named('check') { dependsOn 'verifyGiftBag' }
+
+tasks.register('verifyMissions', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'vn.deadchan.tiktokmob.MissionChecks'
+}
+tasks.named('check') { dependsOn 'verifyMissions' }

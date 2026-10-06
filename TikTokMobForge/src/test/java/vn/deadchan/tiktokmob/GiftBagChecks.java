@@ -25,7 +25,12 @@ public final class GiftBagChecks {
         FullArmorChecks.run(registries);
         InteractionQueueChecks.run();
         RewardMotionChecks.run();
+        LightningCleanupChecks.run();
+        RewardOptionChecks.run(registries);
         RuntimeSettingsChecks.run();
+        BoardTextChecks.run();
+        check(ServerPinnedCommentBoard.contentToken("Tuấn 😀", "Bảng 3D sắc nét").equals("18073b7521da0e5a8c561c4e16e54b62"), "WebView/Python and Java UTF-8 frame identity");
+        System.out.println("WEB_BOARD_TOKEN_OK: Vietnamese and emoji match the WebView frame protocol");
         DonationLimitChecks.run();
         GolemGuardChecks.run();
         GuardBagChecks.run(registries);

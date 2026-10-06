@@ -10,7 +10,6 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.decoration.ArmorStand;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.EntityMountEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
@@ -25,6 +24,8 @@ final class SkyLaunch {
     static boolean readyToRelease(double remaining, boolean clear, long now, long deadline) {
         return (remaining <= 0.25 && clear) || now >= deadline;
     }
+
+    static double stackHeight(double target, double height) { return target + height; }
 
     static double targetHeight(double startY, int surfaceY) {
         return Math.max(startY + 96.0, surfaceY + 12.0);
@@ -47,20 +48,15 @@ final class SkyLaunch {
         });
     }
 
-    static void start(ServerPlayer player) {
+    static void start(ServerPlayer player) { start(player, ""); }
+
+    static void start(ServerPlayer player, String payload) {
+        double height = RewardOptions.number(payload, "height", 96, 1, 2048);
         Flight previous = FLIGHTS.get(player.getUUID());
-        int surface = player.blockPosition().getY();
-        // Cover the full player footprint, including block edges and Nether bedrock ceilings.
-        var box = player.getBoundingBox();
-        for (int x = (int)Math.floor(box.minX); x <= (int)Math.floor(box.maxX); x++) {
-            for (int z = (int)Math.floor(box.minZ); z <= (int)Math.floor(box.maxZ); z++) {
-                surface = Math.max(surface, player.level().getHeight(Heightmap.Types.MOTION_BLOCKING, x, z));
-            }
-        }
-        double target = targetHeight(player.getY(), surface);
+        double target = player.getY() + height;
         if (previous != null) {
             // Combo gifts extend the current flight without remounting or jumping position.
-            FLIGHTS.put(player.getUUID(), new Flight(player, previous.carrier(), Math.max(previous.targetY(), target), previous.deadline()));
+            FLIGHTS.put(player.getUUID(), new Flight(player, previous.carrier(), stackHeight(previous.targetY(), height), previous.deadline() + (long)Math.ceil(height / SPEED) + 20));
             return;
         }
         ArmorStand carrier = EntityTypes.ARMOR_STAND.create(player.level(), EntitySpawnReason.EVENT);
@@ -77,7 +73,7 @@ final class SkyLaunch {
         player.stopFallFlying();
         player.stopRiding();
         if (!player.startRiding(carrier, true, true)) { carrier.discard(); return; }
-        FLIGHTS.put(player.getUUID(), new Flight(player, carrier, target, player.level().getGameTime() + 200));
+        FLIGHTS.put(player.getUUID(), new Flight(player, carrier, target, player.level().getGameTime() + (long)Math.ceil(height / SPEED) + 200));
         GiftNetwork.send(player, new GiftNetwork.SkyRide(carrier.getId()));
     }
 

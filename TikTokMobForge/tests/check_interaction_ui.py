@@ -34,6 +34,8 @@ try:
                 if route.request.url.endswith("/api/save"):
                     saves.append(route.request.post_data_json)
                 route.fulfill(json={"ok": True, "voices": [], "models": []})
+            elif route.request.url.endswith("/api/runtime-settings") and saves:
+                route.fulfill(json={"bridge": {key: saves[-1]["bridge"][key] for key in web.EVENT_KEYS}, "mod": {key: saves[-1]["mod"][key] for key in web.MOD_KEYS}})
             else:
                 route.continue_()
 
@@ -46,15 +48,27 @@ try:
                               "like": ["like_spawn_count"], "view": ["view_enabled", "view_interval_seconds", "view_max_mobs_per_round"]}.items():
             for field in fields:
                 assert page.locator(f'.event-editor[data-prefix="{event}"] #{field}').count() == 1
+        for prefix in ("view", "follow", "comment", "share", "like"):
+            card = page.locator(f'.event-editor[data-prefix="{prefix}"]')
+            card.locator('.dropdown-toggle').click()
+            card.locator('.dropdown-search').fill('totem')
+            card.locator('[data-option-value="item:minecraft:totem_of_undying"]').click()
+            assert 'totem_of_undying' in card.locator('.event-preview').get_attribute('src')
+        page.wait_for_timeout(1400)
+        for prefix in ("view", "follow", "comment", "share", "like"):
+            assert saves[-1]["bridge"][f"{prefix}_mob_type"] == "item:minecraft:totem_of_undying"
+        page.evaluate("state.bridge = {...state.bridge, ...collectPayload().bridge}; renderEvents(); renderLivePanel(false)")
+        assert page.locator('.event-editor[data-prefix="like"] .event-mob-dropdown').get_attribute('data-value') == 'item:minecraft:totem_of_undying'
         page.locator("#comment_cooldown_seconds").fill("12")
         page.wait_for_function("document.querySelector('.event-editor[data-prefix=comment] .event-rule').textContent.includes('12 giây')")
         page.wait_for_timeout(1400)
-        assert saves and saves[-1]["bridge"]["comment_cooldown_seconds"] == 12
+        assert saves and saves[-1]["bridge"]["comment_cooldown_seconds"] == 12, ([s["bridge"]["comment_cooldown_seconds"] for s in saves], page.locator("#comment_cooldown_seconds").input_value())
         page.locator('[data-tab="settings"]').click()
         page.locator('[data-tab="events"]').click()
         assert page.locator("#comment_cooldown_seconds").input_value() == "12"
         page.locator("#comment_cooldown_seconds").fill("10")
         page.wait_for_timeout(100)
+        assert page.locator('.event-editor[data-prefix="like"] .event-mob-dropdown').get_attribute('data-value') == 'item:minecraft:totem_of_undying'
         page.screenshot(path=str(artifacts / "interactions-desktop.png"), full_page=True)
         page.set_viewport_size({"width": 390, "height": 844})
         page.screenshot(path=str(artifacts / "interactions-mobile.png"), full_page=True)

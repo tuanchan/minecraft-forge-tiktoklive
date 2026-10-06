@@ -16,7 +16,7 @@ THANKS_TEXT = "サンキュー、お兄ちゃーん！"
 
 
 def avatar_url(user) -> str:
-    for field in ("avatar_thumb", "avatar_medium", "avatar_large", "avatar"):
+    for field in ("avatar_large", "avatar_medium", "avatar", "avatar_thumb"):
         image = getattr(user, field, None)
         urls = image.get("url_list", []) if isinstance(image, dict) else getattr(image, "url_list", [])
         candidates = [image] if isinstance(image, str) else list(urls or [])

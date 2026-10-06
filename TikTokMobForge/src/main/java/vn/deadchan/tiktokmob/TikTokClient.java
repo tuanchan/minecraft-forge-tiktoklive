@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.ScreenEvent;
@@ -22,6 +23,9 @@ final class TikTokClient {
     static final Identifier BAG_ICON = Identifier.fromNamespaceAndPath("tiktokmob", "textures/gui/iconbaggift.png");
     static final KeyMapping OPEN_BAG = new KeyMapping("key.tiktokmob.gift_bag", GLFW.GLFW_KEY_B, KeyMapping.Category.INVENTORY);
     static final KeyMapping OPEN_SETTINGS = new KeyMapping("key.tiktokmob.settings", GLFW.GLFW_KEY_F8, KeyMapping.Category.INVENTORY);
+    static final KeyMapping GRAB_PIN = new KeyMapping("key.tiktokmob.pin_grab", GLFW.GLFW_KEY_G, KeyMapping.Category.INVENTORY);
+    static final KeyMapping PIN_BOARD = new KeyMapping("key.tiktokmob.pin_board", GLFW.GLFW_KEY_F, KeyMapping.Category.INVENTORY);
+    static final KeyMapping DELETE_PIN = new KeyMapping("key.tiktokmob.pin_delete", GLFW.GLFW_KEY_X, KeyMapping.Category.INVENTORY);
     static com.google.gson.JsonObject runtimeSettings = new com.google.gson.JsonObject();
     static TikTokMobMod.ModSettings settings = new TikTokMobMod.ModSettings();
     static long giftCount;
@@ -32,6 +36,8 @@ final class TikTokClient {
     private static int duration, fadeIn, fadeOut;
 
     static void initialize() {
+        net.minecraftforge.client.event.EntityRenderersEvent.RegisterRenderers.BUS.addListener(event ->
+            event.registerEntityRenderer(net.minecraft.world.entity.EntityTypes.TEXT_DISPLAY, WebBoardRenderer::new));
         GiftNetwork.onSkyRide = message -> {
             int previous = skyCarrierId;
             skyCarrierId = message.carrierId();
@@ -48,7 +54,24 @@ final class TikTokClient {
                 && event.getEntityMounting().isAlive() && event.getEntityBeingMounted() != null
                 && event.getEntityBeingMounted().getId() == skyCarrierId);
         GiftNetwork.onGiftAlert = message -> GiftAlertHud.load(message.token());
-        RegisterKeyMappingsEvent.BUS.addListener(event -> {event.register(OPEN_BAG); event.register(OPEN_SETTINGS);});
+        GiftNetwork.onPinnedComment = PinnedCommentBoard::receive;
+        GiftNetwork.onMissions = MissionHud::receive;
+        InputEvent.MouseScrollingEvent.BUS.addListener((java.util.function.Predicate<InputEvent.MouseScrollingEvent>) event -> {
+            var mc = Minecraft.getInstance();
+            return mc.gui.screen() == null && GRAB_PIN.isDown() && PinnedCommentBoard.scroll(event.getDeltaY(),
+                GLFW.glfwGetKey(mc.getWindow().handle(), GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(mc.getWindow().handle(), GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS);
+        });
+        RegisterKeyMappingsEvent.BUS.addListener(event -> {
+            event.register(OPEN_BAG); event.register(OPEN_SETTINGS); event.register(GRAB_PIN); event.register(PIN_BOARD); event.register(DELETE_PIN);
+        });
+        TickEvent.ClientTickEvent.Pre.BUS.addListener(event -> {
+            var mc = Minecraft.getInstance();
+            if (mc.level != null && mc.gui.screen() == null && PinnedCommentBoard.visible()
+                && mc.options.keySwapOffhand.getKey().equals(PIN_BOARD.getKey())) {
+                while (mc.options.keySwapOffhand.consumeClick()) { }
+            }
+        });
         AddGuiOverlayLayersEvent.BUS.addListener(event -> event.getLayeredDraw().add(
             ForgeLayeredDraw.POST_SLEEP_STACK, Identifier.fromNamespaceAndPath("tiktokmob", "hud"),
             (graphics, delta) -> renderHud(graphics)));
@@ -56,6 +79,18 @@ final class TikTokClient {
             var mc = Minecraft.getInstance();
             if (mc.level == null) { reset(); return; }
             GiftAlertHud.tick();
+            WebBoardTexture.tick();
+            try {
+                boolean pinClicked = false;
+                while (PIN_BOARD.consumeClick()) pinClicked = !pinClicked;
+                PinnedCommentBoard.tick(mc, GRAB_PIN.isDown(), pinClicked);
+                while (DELETE_PIN.consumeClick()) {
+                    if (mc.gui.screen() == null && mc.player != null) GiftNetwork.deleteBoard();
+                }
+            } catch (RuntimeException error) {
+                com.mojang.logging.LogUtils.getLogger().error("Không thể cập nhật bảng bình luận ghim", error);
+                PinnedCommentBoard.reset();
+            }
             while (OPEN_SETTINGS.consumeClick()) {
                 if (connected && mc.player != null) mc.gui.setScreen(new RuntimeSettingsScreen(mc.gui.screen()));
             }
@@ -119,9 +154,14 @@ final class TikTokClient {
             if (Minecraft.getInstance().gui.screen() instanceof GiftBagScreen screen) screen.update(page);
         };
     }
-    private static void reset() { skyCarrierId = -1; connected = false; giftCount = 0; notification = null; GiftAlertHud.clear(); }
+    private static void reset() { skyCarrierId = -1; connected = false; giftCount = 0; notification = null; GiftAlertHud.clear(); WebBoardTexture.clear(); PinnedCommentBoard.reset(); MissionHud.clear(); }
     static void openBag() {
-        if (connected) Minecraft.getInstance().gui.setScreen(new GiftBagScreen());
+        if (connected) {
+            var minecraft = Minecraft.getInstance();
+            if (minecraft.player == null) return;
+            minecraft.player.closeContainer();
+            minecraft.gui.setScreen(new GiftBagScreen());
+        }
     }
     static void icon(GuiGraphicsExtractor g, int x, int y, int size) {
         // Full source image is sampled into the compact button; the asset is kept intact.
@@ -131,6 +171,7 @@ final class TikTokClient {
         var mc = Minecraft.getInstance();
         if (!connected || mc.player == null) return;
         GiftAlertHud.render(g);
+        MissionHud.render(g);
         if (settings.show_death_counter) {
             int deaths = runtimeSettings.has("death_count") ? runtimeSettings.get("death_count").getAsInt() : 0;
             g.text(mc.font, "Số lần chết: " + deaths, 8, 8, 0xffffffff);

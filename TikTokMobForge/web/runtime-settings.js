@@ -43,11 +43,12 @@ async function pollRuntimeSettings() {
         }
         if (card && key.endsWith("_mob_type")) {
           const root = $(".event-mob-dropdown", card);
-          const id = incoming.includes(":") ? incoming : `minecraft:${incoming}`;
+          const reward = eventReward(incoming);
+          const id = eventRewardValue(reward);
           root.dataset.value = id;
-          $(".dropdown-toggle span", root).textContent = state.catalog.mobs.find(x => x.target === id)?.vietnamese_name || id;
+          $(".dropdown-toggle span", root).textContent = reward.vietnamese_name || reward.target;
           const img = $(".event-preview", card);
-          if (img) img.src = eventMobImage(prefix, {kind:"mob", target:id});
+          if (img) img.src = eventMobImage(prefix, reward);
         }
         if (card && key.endsWith("_spawn_count") && prefix !== "like") $(".event-count", card).value = incoming;
         if (key === "likes_per_skeleton") $('.event-editor[data-prefix="like"] .event-count').value = incoming;

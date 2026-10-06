@@ -12,10 +12,12 @@ import java.util.function.BiPredicate;
 
 /** Unclaimed enchants belong to the player's UUID, not the replaceable player entity. */
 public final class PendingEnchantData extends SavedData {
-    record Reward(String slot, int level) {
+    record Reward(String slot, int level, Map<String, Integer> enchantments) {
         static final Codec<Reward> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.fieldOf("slot").forGetter(Reward::slot),
-            Codec.intRange(0, 255).fieldOf("level").forGetter(Reward::level)
+            Codec.intRange(0, 255).fieldOf("level").forGetter(Reward::level),
+            Codec.unboundedMap(Codec.STRING, Codec.intRange(1, 255))
+                .optionalFieldOf("enchantments", Map.of()).forGetter(Reward::enchantments)
         ).apply(i, Reward::new));
     }
     private static final Codec<PendingEnchantData> CODEC = Codec.unboundedMap(Codec.STRING, Reward.CODEC.listOf())
@@ -32,9 +34,12 @@ public final class PendingEnchantData extends SavedData {
         return player.level().getServer().overworld().getDataStorage().computeIfAbsent(TYPE);
     }
     void add(UUID owner, boolean armor, int level) {
+        add(owner, armor, level, Map.of());
+    }
+    void add(UUID owner, boolean armor, int level, Map<String, Integer> enchantments) {
         List<Reward> rewards = pending.computeIfAbsent(owner.toString(), key -> new ArrayList<>());
         for (EquipmentSlot slot : armor ? SpecialRewards.ARMOR : List.of(EquipmentSlot.MAINHAND)) {
-            rewards.add(new Reward(slot.name(), Math.clamp(level, 0, 255)));
+            rewards.add(new Reward(slot.name(), Math.clamp(level, 0, 255), Map.copyOf(enchantments)));
         }
         setDirty();
     }
@@ -45,6 +50,13 @@ public final class PendingEnchantData extends SavedData {
         return slots;
     }
     Set<EquipmentSlot> applyReady(UUID owner, BiPredicate<EquipmentSlot, Integer> apply) {
+        return applyConfigured(owner, (slot, level, enchantments) -> apply.test(slot, level));
+    }
+    @FunctionalInterface
+    interface ApplyEnchant {
+        boolean apply(EquipmentSlot slot, int level, Map<String, Integer> enchantments);
+    }
+    Set<EquipmentSlot> applyConfigured(UUID owner, ApplyEnchant apply) {
         Set<EquipmentSlot> applied = EnumSet.noneOf(EquipmentSlot.class);
         List<Reward> rewards = pending.get(owner.toString());
         if (rewards == null) return applied;
@@ -52,7 +64,7 @@ public final class PendingEnchantData extends SavedData {
             Reward reward = it.next();
             EquipmentSlot slot = EquipmentSlot.valueOf(reward.slot());
             // Consume only after a compatible item has actually received the reward.
-            if (apply.test(slot, reward.level())) {
+            if (apply.apply(slot, reward.level(), reward.enchantments())) {
                 it.remove();
                 applied.add(slot);
                 setDirty();

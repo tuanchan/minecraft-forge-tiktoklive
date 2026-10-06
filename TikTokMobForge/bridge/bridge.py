@@ -1,3 +1,4 @@
+from reward_options import reward_payload, mob_payload
 import asyncio
 import argparse
 from view_interactions import ViewInteractions
@@ -12,6 +13,7 @@ from pathlib import Path
 from interaction_limits import InteractionLimits, user_key
 from follow_history import FollowHistory
 from runtime_settings import LiveSettings
+from milestones import Milestones
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "config.json"
@@ -260,6 +262,7 @@ def send_interaction(
     payload: str = "",
     donation: bool = False,
     notification_kind: str = "",
+    avatar_png: bytes = b"",
 ) -> None:
     if config.get("live_comments_only", False):
         return
@@ -275,14 +278,38 @@ def send_interaction(
     ).decode("ascii")
     encoded_payload = base64.b64encode(str(payload).encode("utf-8")).decode("ascii")
     priority = "donation" if donation else "normal"
-    payload = (
+    if interaction == "pin_comment" and str(payload).strip() and not avatar_png:
+        avatar_png = pin_avatar_png("", safe_name)
+    if interaction == "pin_comment":
+        from pinned_overlay import publish
+        publish(safe_name, str(payload)[:200], avatar_png)
+    encoded_avatar = "" if interaction == "pin_comment" else base64.b64encode(avatar_png[:65_536]).decode("ascii")
+    wire_payload = (
         f"{interaction}\t{encoded_user_key}\t{encoded_name}\t{encoded_notification}"
-        f"\t{encoded_payload}\t{priority}\t{notification_kind}\n"
+        f"\t{encoded_payload}\t{priority}\t{notification_kind}\t{encoded_avatar}\n"
     ).encode("utf-8")
     with socket.create_connection(
         (config["minecraft_host"], int(config["minecraft_port"])), timeout=3
     ) as connection:
-        connection.sendall(payload)
+        connection.sendall(wire_payload)
+
+
+def pin_avatar_png(url: str, name: str) -> bytes:
+    """High-resolution portrait for the desktop WebView overlay."""
+    import io
+    from PIL import Image, ImageDraw, ImageFont
+    from gift_media import load_avatar
+
+    avatar = load_avatar(url, 256) if url else None
+    if avatar is None:
+        avatar = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(avatar)
+        draw.ellipse((1, 1, 254, 254), fill="#51447d", outline="#78e5e5", width=2)
+        initial = (name.strip()[:1] or "?").upper()
+        draw.text((128, 128), initial, font=ImageFont.load_default(size=128), fill="white", anchor="mm")
+    output = io.BytesIO()
+    avatar.save(output, format="PNG")
+    return output.getvalue()
 
 
 def send_mob_interaction(
@@ -294,6 +321,21 @@ def send_mob_interaction(
     donation: bool = False,
     notification_kind: str = "",
 ) -> None:
+    # Legacy mob values stay valid; typed rewards share existing gift handlers.
+    reward_id = str(mob_id).strip()
+    if reward_id.startswith(("item:", "special:")):
+        kind, target = reward_id.split(":", 1)
+        send_interaction(
+            config, "item" if kind == "item" else target,
+            display_name, user_key, notification,
+            target if kind == "item" else reward_payload({"target": target}),
+            donation, notification_kind=notification_kind,
+        )
+        return
+    if str(mob_id).lstrip().startswith("{"):
+        send_interaction(config, "mob", display_name, user_key, notification, mob_id, donation,
+                         notification_kind=notification_kind)
+        return
     normalized_id = str(mob_id).strip().lower()
     if ":" not in normalized_id:
         normalized_id = f"minecraft:{normalized_id}"
@@ -327,7 +369,7 @@ def dispatch_gift_action(
             )
             if action_kind == "mob":
                 send_mob_interaction(
-                    config, target, display_name, user_key, current_notification, True
+                    config, mob_payload(action), display_name, user_key, current_notification, True
                 )
             elif action_kind == "item":
                 send_interaction(
@@ -346,7 +388,7 @@ def dispatch_gift_action(
                     display_name,
                     user_key,
                     current_notification,
-                    payload=str(max(0, min(255, int(action.get("level", 0 if target.startswith("enchant_") else 1))))),
+                    payload=reward_payload(action),
                     donation=True,
                     notification_kind="gift",
                 )
@@ -467,6 +509,7 @@ def run_live(config: dict) -> None:
     install_websocket_url_fix()
     from TikTokLive.events import (
         CommentEvent,
+        RoomPinEvent,
         ConnectEvent,
         DisconnectEvent,
         FollowEvent,
@@ -485,6 +528,7 @@ def run_live(config: dict) -> None:
     live_settings.refresh()
     gift_actions = load_gift_actions(config)
     limits = InteractionLimits()
+    milestones = Milestones(config, send_mob_interaction, CONFIG_PATH)
     follow_history = FollowHistory(ROOT / "follow_history.sqlite3", username)
     views = ViewInteractions()
     view_task = None
@@ -492,6 +536,9 @@ def run_live(config: dict) -> None:
     async def view_loop():
         while True:
             live_settings.refresh()
+            milestones.refresh()
+            milestones.flush()
+            milestones.publish()
             try:
                 views.tick(config, send_mob_interaction)
             except OSError as error:
@@ -520,6 +567,7 @@ def run_live(config: dict) -> None:
     async def on_connect(event: ConnectEvent) -> None:
         nonlocal failed_attempts, view_task
         failed_attempts = 0
+        milestones.start_session(getattr(event, 'room_id', None) or getattr(client, 'room_id', None))
         if view_task is not None:
             view_task.cancel()
         views.reset()
@@ -539,6 +587,10 @@ def run_live(config: dict) -> None:
             view_task.cancel()
             view_task = None
         views.reset()
+        try:
+            send_interaction(config, "pin_comment", "TikTok", "room-pin", "", "")
+        except OSError:
+            pass
         print("TikTok LIVE đã ngắt kết nối.")
 
     @client.on(JoinEvent)
@@ -554,29 +606,27 @@ def run_live(config: dict) -> None:
     async def on_follow(event: FollowEvent) -> None:
         views.observe_event(event)
         live_settings.refresh()
-        follow_mob = str(config.get("follow_mob_type", "creeper"))
-        follow_spawn_count = max(1, min(100, int(config.get("follow_spawn_count", 1))))
         name = nickname(event)
         key = user_key(event)
         if not follow_history.claim(key):
             print(f"FOLLOW bỏ qua: tài khoản đã follow/nhận thưởng trước đó user={key}")
             return
         notification = "+ Follow" if config.get("display_follow_enabled", True) else ""
-        for index in range(follow_spawn_count):
-            send_mob_interaction(config, follow_mob, name, key, notification if index == 0 else "", notification_kind="follow")
-        print(f"FOLLOW {name} user={key} -> {follow_spawn_count} x {follow_mob}")
+        milestones.add("follow", 1, name, key)
+        for index in range(max(1, min(100, int(config.get("follow_spawn_count", 1))))):
+            send_mob_interaction(config, str(config.get("follow_mob_type", "creeper")), name, key,
+                                 notification if index == 0 else "", notification_kind="follow")
 
     @client.on(CommentEvent)
     async def on_comment(event: CommentEvent) -> None:
         views.observe_event(event)
         live_settings.refresh()
-        comment_mob = str(config.get("comment_mob_type", "zombie"))
-        comment_spawn_count = max(1, min(100, int(config.get("comment_spawn_count", 1))))
         comment_limit = max(1, int(config.get("comment_limit", 1)))
         comment_cooldown_seconds = max(1.0, float(config.get("comment_cooldown_seconds", 10)))
         name = nickname(event)
         key = user_key(event)
         follow_history.observe(event, key)
+        milestones.add("comment", 1, name, key)
         allowed, remaining = limits.allow("comment", key, comment_limit, comment_cooldown_seconds)
         if comment_speaker is not None and (allowed or config.get("tts_read_limited_comments", True)):
             comment_speaker.enqueue(name, event.comment)
@@ -591,20 +641,39 @@ def run_live(config: dict) -> None:
                 send_interaction(config, "notification", name, key, notification, notification_kind="comment")
             print(f"COMMENT {name} user={key} bị giới hạn riêng, chờ thêm {remaining:.1f} giây")
             return
-        for index in range(comment_spawn_count):
-            send_mob_interaction(config, comment_mob, name, key, notification if index == 0 else "", notification_kind="comment")
-        print(f"COMMENT {name} user={key} -> {comment_spawn_count} x {comment_mob}")
+        for index in range(max(1, min(100, int(config.get("comment_spawn_count", 1))))):
+            send_mob_interaction(config, str(config.get("comment_mob_type", "zombie")), name, key,
+                                 notification if index == 0 else "", notification_kind="comment")
+
+    @client.on(RoomPinEvent)
+    async def on_room_pin(event: RoomPinEvent) -> None:
+        # RoomPinEvent carries the original chat message and a separate cancel action.
+        from TikTokLive.proto import PinMessageActionType
+
+        if event.action == PinMessageActionType.PIN_CANCEL:
+            send_interaction(config, "pin_comment", "TikTok", "room-pin", "", "")
+            return
+        if event.action != PinMessageActionType.PIN or event.chat_message is None:
+            return
+        chat = event.chat_message
+        pin_user = getattr(chat, "user", None)
+        name = getattr(pin_user, "nickname", None) or "TikTok"
+        comment = " ".join(str(getattr(chat, "content", "") or "").split())[:400]
+        if comment:
+            from gift_alerts import avatar_url
+            picture = await asyncio.to_thread(pin_avatar_png, avatar_url(pin_user), name)
+            send_interaction(config, "pin_comment", name, "room-pin", "", comment,
+                             avatar_png=picture)
 
     @client.on(ShareEvent)
     async def on_share(event: ShareEvent) -> None:
         views.observe_event(event)
         live_settings.refresh()
-        share_mob = str(config.get("share_mob_type", "enderman"))
-        share_spawn_count = max(1, min(100, int(config.get("share_spawn_count", 1))))
         share_limit = max(1, int(config.get("share_limit", 1)))
         share_cooldown_seconds = max(1.0, float(config.get("share_cooldown_seconds", 10)))
         name = nickname(event)
         key = user_key(event)
+        milestones.add("share", 1, name, key)
         allowed, remaining = limits.allow("share", key, share_limit, share_cooldown_seconds)
         notification = "+ Share" if config.get("display_share_enabled", True) else ""
         if not allowed:
@@ -612,28 +681,24 @@ def run_live(config: dict) -> None:
                 send_interaction(config, "notification", name, key, notification, notification_kind="share")
             print(f"SHARE {name} user={key} bị giới hạn riêng, chờ thêm {remaining:.1f} giây")
             return
-        for index in range(share_spawn_count):
-            send_mob_interaction(config, share_mob, name, key, notification if index == 0 else "", notification_kind="share")
-        print(f"SHARE {name} user={key} -> {share_spawn_count} x {share_mob}")
+        for index in range(max(1, min(100, int(config.get("share_spawn_count", 1))))):
+            send_mob_interaction(config, str(config.get("share_mob_type", "enderman")), name, key,
+                                 notification if index == 0 else "", notification_kind="share")
 
     @client.on(LikeEvent)
     async def on_like(event: LikeEvent) -> None:
         views.observe_event(event)
         live_settings.refresh()
-        like_mob = str(config.get("like_mob_type", "skeleton"))
-        like_spawn_count = max(1, min(100, int(config.get("like_spawn_count", 1))))
-        likes_needed = max(1, int(config.get("likes_per_skeleton", 50)))
         name = nickname(event)
         key = user_key(event)
         count = max(1, int(getattr(event, "count", 1) or 1))
+        milestones.add("like", count, name, key)
+        personal_rounds = limits.add_likes(key, count, max(1, int(config.get("likes_per_skeleton", 50))))
+        for _ in range(personal_rounds * max(1, min(100, int(config.get("like_spawn_count", 1))))):
+            send_mob_interaction(config, str(config.get("like_mob_type", "skeleton")), name, key,
+                                 "", notification_kind="like")
         if config.get("display_like_enabled", True):
             send_interaction(config, "notification", name, key, "+ Like", notification_kind="like")
-        skeletons = limits.add_likes(key, count, likes_needed)
-        total_spawn = skeletons * like_spawn_count
-        for _ in range(total_spawn):
-            send_mob_interaction(config, like_mob, name, key, "", notification_kind="like")
-        if skeletons:
-            print(f"LIKE {name} user={key} -> {total_spawn} x {like_mob}")
 
     @client.on(GiftEvent)
     async def on_gift(event: GiftEvent) -> None:
@@ -664,6 +729,7 @@ def run_live(config: dict) -> None:
         if not config.get("display_gift_enabled", True):
             gift_notification = ""
         key = user_key(event)
+        milestones.add("coins", max(0, diamond_count) * gift_count, name, key)
         def deliver_reward():
             if action is None:
                 if gift_notification and config.get("display_unmapped_gifts", True):
@@ -744,6 +810,8 @@ def main() -> None:
     )
     test_group.add_argument("--test-tts", action="store_true")
     test_group.add_argument("--test-gift-alert", action="store_true")
+    test_group.add_argument("--test-pin", metavar="BINH_LUAN")
+    test_group.add_argument("--clear-pin", action="store_true")
     test_group.add_argument(
         "--test-spam-users",
         type=int,
@@ -753,7 +821,13 @@ def main() -> None:
     args = parser.parse_args()
     try:
         config = load_config()
-        if args.test_gift_alert:
+        if args.test_pin or args.clear_pin:
+            if config.get("live_comments_only", False):
+                raise SystemExit("Hãy tắt chế độ chỉ đọc bình luận để thử bảng trong Minecraft.")
+            text = " ".join(str(args.test_pin or "").split())[:400]
+            send_interaction(config, "pin_comment", "Admin thử bảng", "test-pin", "", text)
+            print("Đã gửi bảng bình luận ghim mẫu." if text else "Đã gửi lệnh bỏ ghim bảng.")
+        elif args.test_gift_alert:
             from gift_alerts import GiftAlerts
             alerts = GiftAlerts(config)
             if not alerts.play({"name": "Người tặng mẫu", "gift": "Hoa Hồng", "count": 3, "avatar": ""}):

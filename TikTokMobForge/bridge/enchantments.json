@@ -1,0 +1,263 @@
+{
+  "minecraft_version": "26.2",
+  "enchantments": [
+    {
+      "id": "minecraft:aqua_affinity",
+      "name": "Đào nhanh dưới nước",
+      "english_name": "Aqua Affinity",
+      "max_level": 1
+    },
+    {
+      "id": "minecraft:bane_of_arthropods",
+      "name": "Diệt chân đốt",
+      "english_name": "Bane of Arthropods",
+      "max_level": 5
+    },
+    {
+      "id": "minecraft:binding_curse",
+      "name": "Lời nguyền ràng buộc",
+      "english_name": "Curse of Binding",
+      "max_level": 1
+    },
+    {
+      "id": "minecraft:blast_protection",
+      "name": "Bảo vệ khỏi vụ nổ",
+      "english_name": "Blast Protection",
+      "max_level": 4
+    },
+    {
+      "id": "minecraft:breach",
+      "name": "Phá giáp",
+      "english_name": "Breach",
+      "max_level": 4
+    },
+    {
+      "id": "minecraft:channeling",
+      "name": "Chớp điện",
+      "english_name": "Channeling",
+      "max_level": 1
+    },
+    {
+      "id": "minecraft:density",
+      "name": "Tỉ trọng",
+      "english_name": "Density",
+      "max_level": 5
+    },
+    {
+      "id": "minecraft:depth_strider",
+      "name": "Sải bước dưới nước",
+      "english_name": "Depth Strider",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:efficiency",
+      "name": "Hiệu suất",
+      "english_name": "Efficiency",
+      "max_level": 5
+    },
+    {
+      "id": "minecraft:feather_falling",
+      "name": "Bảo vệ khỏi sát thương rơi",
+      "english_name": "Feather Falling",
+      "max_level": 4
+    },
+    {
+      "id": "minecraft:fire_aspect",
+      "name": "Gây cháy",
+      "english_name": "Fire Aspect",
+      "max_level": 2
+    },
+    {
+      "id": "minecraft:fire_protection",
+      "name": "Bảo vệ khỏi lửa",
+      "english_name": "Fire Protection",
+      "max_level": 4
+    },
+    {
+      "id": "minecraft:flame",
+      "name": "Lửa",
+      "english_name": "Flame",
+      "max_level": 1
+    },
+    {
+      "id": "minecraft:fortune",
+      "name": "Gia tài",
+      "english_name": "Fortune",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:frost_walker",
+      "name": "Chân lạnh",
+      "english_name": "Frost Walker",
+      "max_level": 2
+    },
+    {
+      "id": "minecraft:impaling",
+      "name": "Xiên vào da thịt",
+      "english_name": "Impaling",
+      "max_level": 5
+    },
+    {
+      "id": "minecraft:infinity",
+      "name": "Vô hạn",
+      "english_name": "Infinity",
+      "max_level": 1
+    },
+    {
+      "id": "minecraft:knockback",
+      "name": "Đánh bật lùi",
+      "english_name": "Knockback",
+      "max_level": 2
+    },
+    {
+      "id": "minecraft:looting",
+      "name": "Nhặt",
+      "english_name": "Looting",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:loyalty",
+      "name": "Trung thành",
+      "english_name": "Loyalty",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:luck_of_the_sea",
+      "name": "May mắn của biển cả",
+      "english_name": "Luck of the Sea",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:lunge",
+      "name": "Lao tới",
+      "english_name": "Lunge",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:lure",
+      "name": "Nhử",
+      "english_name": "Lure",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:mending",
+      "name": "Tu sửa",
+      "english_name": "Mending",
+      "max_level": 1
+    },
+    {
+      "id": "minecraft:multishot",
+      "name": "Mưa tên",
+      "english_name": "Multishot",
+      "max_level": 1
+    },
+    {
+      "id": "minecraft:piercing",
+      "name": "Xuyên thủng",
+      "english_name": "Piercing",
+      "max_level": 4
+    },
+    {
+      "id": "minecraft:power",
+      "name": "Sức mạnh",
+      "english_name": "Power",
+      "max_level": 5
+    },
+    {
+      "id": "minecraft:projectile_protection",
+      "name": "Bảo vệ khỏi vật bắn ra",
+      "english_name": "Projectile Protection",
+      "max_level": 4
+    },
+    {
+      "id": "minecraft:protection",
+      "name": "Bảo vệ",
+      "english_name": "Protection",
+      "max_level": 4
+    },
+    {
+      "id": "minecraft:punch",
+      "name": "Xung kích",
+      "english_name": "Punch",
+      "max_level": 2
+    },
+    {
+      "id": "minecraft:quick_charge",
+      "name": "Nạp nhanh",
+      "english_name": "Quick Charge",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:respiration",
+      "name": "Hô hấp",
+      "english_name": "Respiration",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:riptide",
+      "name": "Sóng dữ",
+      "english_name": "Riptide",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:sharpness",
+      "name": "Sắc bén",
+      "english_name": "Sharpness",
+      "max_level": 5
+    },
+    {
+      "id": "minecraft:silk_touch",
+      "name": "Độ mềm mại",
+      "english_name": "Silk Touch",
+      "max_level": 1
+    },
+    {
+      "id": "minecraft:smite",
+      "name": "Diệt xác sống",
+      "english_name": "Smite",
+      "max_level": 5
+    },
+    {
+      "id": "minecraft:soul_speed",
+      "name": "Tốc độ linh hồn",
+      "english_name": "Soul Speed",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:sweeping_edge",
+      "name": "Quét cạnh",
+      "english_name": "Sweeping Edge",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:swift_sneak",
+      "name": "Rón rén nhanh",
+      "english_name": "Swift Sneak",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:thorns",
+      "name": "Gai",
+      "english_name": "Thorns",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:unbreaking",
+      "name": "Chậm hỏng",
+      "english_name": "Unbreaking",
+      "max_level": 3
+    },
+    {
+      "id": "minecraft:vanishing_curse",
+      "name": "Lời nguyền biến mất",
+      "english_name": "Curse of Vanishing",
+      "max_level": 1
+    },
+    {
+      "id": "minecraft:wind_burst",
+      "name": "Phong bộc",
+      "english_name": "Wind Burst",
+      "max_level": 3
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "providers": [
+    {"type": "bitmap", "file": "tiktokmob:font/avatar_pixel.png", "ascent": 8, "height": 8, "chars": ["\ue001\ue002"]}
+  ]
+}

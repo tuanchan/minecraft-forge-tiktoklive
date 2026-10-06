@@ -107,5 +107,7 @@ select option{color:#171717;background:#fff}
   .mapping-row .mapping-icon{grid-column:2;grid-row:2}
   .mapping-row .reward-select{grid-column:3;grid-row:2}
   .mapping-row .amount{grid-column:4;grid-row:2}
-  .mapping-row .reward-level-controls{grid-column:2/-1;grid-row:3;flex-wrap:wrap}
+  .mapping-row .reward-level-controls{grid-column:2/-1;grid-row:auto;flex-wrap:wrap;min-width:0}
+  .mapping-row .reward-level-controls label{flex-wrap:wrap;white-space:normal;min-width:0;max-width:100%}
+  .mapping-row .reward-level-controls select{width:auto;max-width:100%}
 }

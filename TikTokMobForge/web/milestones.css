@@ -1,0 +1,59 @@
+/* Glass/Gel progress treatment adapted from Simey:
+   https://codepen.io/simeydotme/pen/bNEaqmb (Sunset / light theme). */
+.gel-progress {
+  --color-1:oklch(0.66 0.25 30);--color-2:oklch(0.72 0.2 55);
+  --color-3:oklch(0.79 0.2 80);--color-4:oklch(0.96 0.24 90);
+  --bg:oklch(0.92 0.02 260 / 0.75);
+  appearance:none;display:block;width:100%;font-size:18px;height:2.5em;
+  border-radius:99vw;border:none;padding:0.2em;container-type:inline-size;
+  background:linear-gradient(to bottom,oklch(from var(--bg) calc(l - 0.1) c h),oklch(from var(--bg) l c h) 66%) border-box;
+  box-shadow:inset 0 0 0 max(1px,0.05em) oklch(from var(--bg) calc(l - 0.1) c h / 0.33);
+  color-scheme:light;
+}
+.gel-progress::-webkit-progress-bar {appearance:none;background:none}
+.gel-progress[value="0"]::-webkit-progress-value {border:0!important;box-shadow:none!important;background:none!important}
+.gel-progress[value="0"]::-moz-progress-bar {border:0!important;box-shadow:none!important;background:none!important}
+.gel-progress::-webkit-progress-value {
+  border-radius:99vw;border:max(1px,0.1em) transparent solid;
+  background:
+    radial-gradient(70% 2em at center 120%,oklch(0.99 0.025 260 / 100%) 0%,oklch(0.99 0.025 260 / 88%) 21%,oklch(0.99 0.025 260 / 75%) 30%,oklch(0.99 0.025 260 / 64%) 39%,oklch(0.99 0.025 260 / 52%) 46%,oklch(0.99 0.025 260 / 41%) 54%,oklch(0.99 0.025 260 / 31%) 61%,oklch(0.99 0.025 260 / 21%) 69%,oklch(0.99 0.025 260 / 12%) 79%,oklch(0.99 0.025 260 / 0%) 100%) padding-box,
+    linear-gradient(to right,var(--color-1) 5%,var(--color-2),var(--color-3) 50%,var(--color-4)) padding-box,
+    linear-gradient(to bottom,oklch(0.95 0.01 260),oklch(0.92 0.018 260 / 80%) 33%,oklch(0.99 0.01 260 / 80%)) padding-box,
+    linear-gradient(165deg,oklch(0.94 0.025 260 / 80%) 25%,oklch(0.99 0.01 260 / 80%)) border-box;
+  background-blend-mode:normal,overlay,normal,normal;
+  background-size:cover,100cqw 100%,cover,cover;
+  box-shadow:inset 0.2em 0.2em 0.3em -0.1em oklch(0.92 0.018 260 / 80%),inset -0.2em -0.2em 0.3em -0.1em oklch(0.98 0.018 260 / 80%),oklch(0.99 0.02 260 / 0.8) 1em 0.66em 1em -0.66em,oklch(0.35 0.1 260 / 0.05) 0 max(4px,0.3em) 0.3em 0,oklch(0.35 0.1 260 / 0.07) 0 max(2px,0.18em) 0.18em 0,oklch(0.35 0.1 260 / 0.05) 0 max(1px,0.05em) max(2px,0.05em) 0;
+}
+.gel-progress::-moz-progress-bar {
+  border-radius:99vw;border:2px solid #edf3fc;
+  background:radial-gradient(70% 2em at center 120%,#f8fcff 0%,#f8fcff00 100%),linear-gradient(90deg,#fbd7e5,#ffefe0 65%,#fbfaf1);
+  box-shadow:inset 3px 3px 5px #e2e8f1,inset -3px -3px 5px #f9fcff,0 3px 5px #bec9df55;
+}
+.milestone-panel{display:grid;gap:12px;margin-top:14px;min-width:0}
+.milestone-panel:empty{display:none}
+.milestone-group.event-card,.milestone-group{display:block!important;background:#e7edf5!important;border:1px solid #d7dfeb!important;border-radius:16px!important;padding:14px!important;min-width:0;color:#485468!important;box-shadow:none!important}
+.goal-heading,.goal-reward-line{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.goal-heading small{font-size:11px;color:#68778f}
+.goal-display{margin-top:12px;min-width:0}
+.goal-reward-line{justify-content:flex-start;font-size:12px;line-height:1.5}
+.goal-reward-line img{width:36px;height:36px;object-fit:contain;image-rendering:pixelated}
+.gel-field{position:relative;margin-top:8px;min-width:0}
+.gel-label{position:absolute;inset:0;display:flex;align-items:center;padding:0 18px;pointer-events:none;font-family:Consolas,monospace;font-size:12px;color:#7d8ba6;text-shadow:0 1px #fff9}
+.goal-rounds{display:none!important}
+.milestone-editor{margin-bottom:16px;padding:18px}
+.milestone-editor-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.milestone-switch{display:flex!important;align-items:center;gap:8px}
+.milestone-switch input{width:auto!important;accent-color:#25b9a4}
+.milestone-row{display:grid;grid-template-columns:minmax(90px,1fr) minmax(170px,3fr) minmax(80px,1fr) auto;gap:12px;align-items:end;margin:12px 0}
+.milestone-row input{width:100%;min-width:0}
+.milestone-row label{display:grid;gap:6px}
+.goal-reward-field{display:grid;gap:6px;min-width:0}
+.goal-picker{display:flex;align-items:center;gap:10px;min-width:0}
+.goal-picker .goal-selected-image{width:38px;height:38px;object-fit:contain;flex:0 0 38px}
+.goal-picker .search-dropdown{flex:1;min-width:0}
+/* Room goals supplement the independent per-viewer interaction controls. */
+.mission-editor{margin:16px 0;padding:20px}.mission-head{display:flex;justify-content:space-between;margin-bottom:16px}.mission-head input{width:auto}.mission-stage{position:relative;aspect-ratio:16/9;max-width:900px;margin:16px auto;background:linear-gradient(#397bb4 55%,#50663e 55%);overflow:hidden;border-radius:12px}.mission-stage[hidden]{display:none}.mission-preview{position:absolute;cursor:move;touch-action:none;user-select:none;box-sizing:border-box;min-width:330px}.mission-editor input[type=checkbox]{width:auto}#missionProgress{display:grid;gap:12px}.mission-player{display:grid;gap:12px}.mission-player h4{margin:0}.mission-card{position:relative;display:grid;grid-template-columns:74px minmax(180px,1fr) 74px;align-items:center;min-height:94px;padding:8px 12px;border:3px solid #70ddff;border-radius:21px;overflow:hidden;color:#fff;background:linear-gradient(135deg,#071d30f2,#163e59e8);box-shadow:inset 0 0 0 2px #d9f8ffb8,0 4px 14px #00172599;text-shadow:0 2px 2px #00131c}.mission-card::before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,#ffffff18,transparent 35%,#0be9ff18);pointer-events:none}.mission-card.mission-kill{background:linear-gradient(#09213fc9,#18385ecc),url('/assets/gietmod.png') center/cover}.mission-card-body{position:relative;z-index:2;min-width:0}.mission-card-body strong{display:block;margin:0 0 7px;font-size:20px;color:#fff}.mission-card-body small{display:block;margin-top:5px;font-size:11px;color:#c5f7ff}.mission-icon{position:relative;z-index:2;width:68px;height:68px;object-fit:contain;filter:drop-shadow(0 2px 2px #00131c)}.mission-icon-right{justify-self:end}.mission-kill .mission-icon-left{content:url('/assets/zombieprogess.png')}.mission-diamond-gem{position:absolute;z-index:3;right:6px;bottom:3px;width:31px;height:31px;object-fit:contain}.mission-bar{position:relative;height:28px;border:3px solid #7dcaf0;border-radius:18px;background:linear-gradient(#66829e,#243a51);box-shadow:inset 0 2px 5px #07121dcc;overflow:hidden}.mission-bar i{position:absolute;inset:0 auto 0 0;width:var(--mission-progress);background:repeating-linear-gradient(130deg,#00aaca 0 14px,#0bd8e3 14px 26px,#19edf0 26px 32px);box-shadow:inset 0 2px 4px #9effff,0 0 8px #00eaff}.mission-bar b{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(100% / var(--mission-steps) - 2px),#d9fbffcc calc(100% / var(--mission-steps) - 2px) calc(100% / var(--mission-steps)));opacity:.72}.mission-bar span{position:absolute;inset:0;display:grid;place-items:center;font:700 13px Consolas,monospace;color:#fff;text-shadow:0 2px 2px #002433}.mission-preview .mission-card{min-height:76px;grid-template-columns:58px minmax(150px,1fr) 58px;padding:5px 8px}.mission-preview .mission-icon{width:54px;height:54px}.mission-preview .mission-card-body strong{font-size:14px}.mission-preview .mission-bar{height:22px}.mission-preview .mission-bar span{font-size:10px}
+@media(max-width:700px){.milestone-row{grid-template-columns:1fr 1fr}.milestone-editor{padding:12px}}
+@media(prefers-reduced-motion:reduce){.gel-progress{scroll-behavior:auto}}
+.mission-check{display:flex!important;align-items:center;gap:8px}.mission-check input[type=checkbox]{width:auto!important;margin:0}
+.mission-kill .mission-icon-left{content:normal!important;width:62px;height:62px;image-rendering:auto;transform:none}

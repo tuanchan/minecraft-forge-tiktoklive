@@ -14,6 +14,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Khong xuat duoc cau hinh mac dinh tu ban BAT.'
 $runtimeFiles = @(
     'GUI\default_profile.json',
     'bridge\common_gifts.json',
+    'bridge\enchantments.json',
     'tooltt\TikTokGiftDownloader_v2\TikTokGiftDownloader\main.py',
     'tooltt\TikTokGiftDownloader_v2\TikTokGiftDownloader\README.txt',
     'tooltt\TikTokGiftDownloader_v2\TikTokGiftDownloader\requirements.txt'

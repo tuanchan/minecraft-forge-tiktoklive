@@ -6,31 +6,31 @@
   "bridge": {
     "unmapped_gift_mode": "reward",
     "unmapped_gift_action": "item",
-    "unmapped_gift_target": "minecraft:bread",
-    "unmapped_gift_amount": 1,
+    "unmapped_gift_target": "minecraft:enchanted_golden_apple",
+    "unmapped_gift_amount": 3,
     "unmapped_gift_level": 1,
     "tiktok_username": "_deadchan",
     "likes_per_skeleton": 500,
-    "like_mob_type": "enderman",
+    "like_mob_type": "item:minecraft:totem_of_undying",
     "like_spawn_count": 1,
-    "comment_mob_type": "cow",
+    "comment_mob_type": "zombie",
     "comment_spawn_count": 1,
     "share_mob_type": "skeleton",
     "share_spawn_count": 1,
     "share_limit": 1,
     "share_cooldown_seconds": 60.0,
-    "follow_mob_type": "pillager",
-    "follow_spawn_count": 3,
+    "follow_mob_type": "enderman",
+    "follow_spawn_count": 1,
     "view_enabled": true,
     "view_mob_type": "pig",
     "view_spawn_count": 1,
     "view_interval_seconds": 180.0,
     "view_max_mobs_per_round": 200,
     "comment_limit": 1,
-    "comment_cooldown_seconds": 1.0,
+    "comment_cooldown_seconds": 30.0,
     "tts_enabled": true,
     "live_comments_only": false,
-    "tts_provider": "elevenlabs",
+    "tts_provider": "edge",
     "tts_edge_voice": "vi-VN-HoaiMyNeural",
     "tts_edge_rate": 10,
     "tts_edge_pitch": 60,
@@ -85,14 +85,15 @@
     "display_comment_max_characters": 80,
     "gift_actions": [
       {
-        "gift_name": "Glow Stick",
-        "gift_id": "6788",
+        "gift_name": "Birthday Cake",
+        "gift_id": "9340",
         "panel_note": "",
-        "vietnamese_name": "Glow Stick",
+        "vietnamese_name": "Birthday Cake",
         "coin_value": 1,
-        "action": "mob",
-        "target": "minecraft:skeleton",
-        "amount": 10,
+        "action": "special",
+        "target": "troll_pumpkin",
+        "duration_seconds": 10.0,
+        "amount": 1,
         "level": 1
       },
       {
@@ -107,31 +108,42 @@
         "level": 1
       },
       {
-        "gift_name": "Lucky Pig",
-        "gift_id": "8825",
+        "gift_name": "You're awesome",
+        "gift_id": "15232",
         "panel_note": "",
-        "vietnamese_name": "Lucky Pig",
-        "coin_value": 10,
+        "vietnamese_name": "You're awesome",
+        "coin_value": 1,
         "action": "mob",
-        "target": "minecraft:piglin_brute",
+        "target": "minecraft:skeleton",
         "amount": 10,
         "level": 1
       },
       {
         "gift_name": "TikTok",
-        "gift_id": "",
+        "gift_id": "5269",
         "panel_note": "",
         "vietnamese_name": "TikTok",
         "coin_value": 1,
         "action": "mob",
+        "target": "minecraft:creeper",
+        "amount": 10,
+        "level": 1
+      },
+      {
+        "gift_name": "Glow Stick",
+        "gift_id": "6788",
+        "panel_note": "",
+        "vietnamese_name": "Glow Stick",
+        "coin_value": 1,
+        "action": "mob",
         "target": "minecraft:enderman",
-        "amount": 3,
+        "amount": 5,
         "level": 1
       },
       {
         "gift_name": "GG",
-        "gift_id": "",
-        "panel_note": "",
+        "gift_id": "6064",
+        "panel_note": "bảo kê admin",
         "vietnamese_name": "GG",
         "coin_value": 1,
         "action": "mob",
@@ -142,23 +154,12 @@
       {
         "gift_name": "A Shard of Hope",
         "gift_id": "59881",
-        "panel_note": "",
+        "panel_note": "bảo kê admin",
         "vietnamese_name": "A Shard of Hope",
-        "coin_value": 1,
-        "action": "mob",
-        "target": "minecraft:creeper",
-        "amount": 5,
-        "level": 1
-      },
-      {
-        "gift_name": "Clap Clap",
-        "gift_id": "231956",
-        "panel_note": "",
-        "vietnamese_name": "Clap Clap",
         "coin_value": 1,
         "action": "special",
         "target": "armored_wolf",
-        "amount": 2,
+        "amount": 5,
         "level": 1
       },
       {
@@ -171,14 +172,159 @@
         "target": "minecraft:warden",
         "amount": 10,
         "level": 1
+      },
+      {
+        "gift_name": "Lucky pig",
+        "gift_id": "8825",
+        "panel_note": "full giáp",
+        "vietnamese_name": "Lucky pig",
+        "coin_value": 10,
+        "action": "special",
+        "target": "netherite_armor",
+        "amount": 1,
+        "level": 1
+      },
+      {
+        "gift_name": "Spinning Soccer",
+        "gift_id": "105781",
+        "panel_note": "",
+        "vietnamese_name": "Spinning Soccer",
+        "coin_value": 5,
+        "action": "item",
+        "target": "minecraft:netherite_sword",
+        "amount": 1,
+        "level": 1
+      },
+      {
+        "gift_name": "Rosa",
+        "gift_id": "8913",
+        "panel_note": "xóa đồ",
+        "vietnamese_name": "Rosa",
+        "coin_value": 10,
+        "action": "special",
+        "target": "clear_inventory",
+        "amount": 1,
+        "level": 1
+      },
+      {
+        "gift_name": "Love you so much",
+        "gift_id": "15231",
+        "panel_note": "",
+        "vietnamese_name": "Love you so much",
+        "coin_value": 1,
+        "action": "special",
+        "target": "spawn_tnt",
+        "damage_players": false,
+        "fuse_seconds": 4.0,
+        "break_blocks": true,
+        "amount": 1,
+        "level": 1
+      },
+      {
+        "gift_name": "Balloon Gift Box",
+        "gift_id": "12316",
+        "panel_note": "",
+        "vietnamese_name": "Balloon Gift Box",
+        "coin_value": 100,
+        "action": "mob",
+        "target": "minecraft:wither",
+        "amount": 10,
+        "level": 1
+      },
+      {
+        "gift_name": "Clap Clap",
+        "gift_id": "231956",
+        "panel_note": "",
+        "vietnamese_name": "Clap Clap",
+        "coin_value": 1,
+        "action": "item",
+        "target": "minecraft:enchanted_golden_apple",
+        "amount": 3,
+        "level": 1
       }
     ],
     "event_images": {
       "comment": "/assets/custom/event-comment.png?v=1788837117653889800",
       "share": "/assets/custom/event-share.png?v=1788850428934291200"
+    },
+    "milestones": {
+      "like": {
+        "enabled": true,
+        "rules": [
+          {
+            "id": "like-default",
+            "reward": "minecraft:zombie",
+            "threshold": 500000,
+            "amount": 1000
+          }
+        ]
+      },
+      "follow": {
+        "enabled": false,
+        "rules": [
+          {
+            "id": "follow-default",
+            "reward": "minecraft:pillager",
+            "threshold": 1,
+            "amount": 3
+          }
+        ]
+      },
+      "comment": {
+        "enabled": false,
+        "rules": [
+          {
+            "id": "comment-default",
+            "reward": "minecraft:wither_skeleton",
+            "threshold": 1,
+            "amount": 1
+          }
+        ]
+      },
+      "share": {
+        "enabled": false,
+        "rules": [
+          {
+            "id": "share-default",
+            "reward": "minecraft:skeleton",
+            "threshold": 1,
+            "amount": 1
+          }
+        ]
+      },
+      "coins": {
+        "enabled": true,
+        "rules": [
+          {
+            "id": "coins-default",
+            "reward": "minecraft:iron_golem",
+            "threshold": 100,
+            "amount": 10
+          }
+        ]
+      }
     }
   },
   "mod": {
+    "creeper_break_blocks": false,
+    "tnt_break_blocks": true,
+    "pinned_board_background": "black",
+    "pinned_board_border": "yellow",
+    "pinned_board_author_color": "#eefeb4",
+    "pinned_board_comment_color": "#f4f7fb",
+    "pinned_board_scale": 1.0,
+    "pinned_board_width": 1.0,
+    "pinned_board_height": 1.25,
+    "pinned_board_text_scale": 1.0,
+    "pinned_board_avatar_scale": 1.0,
+    "pinned_board_corner_radius": 0.16,
+    "pinned_board_avatar_x": 17.0,
+    "pinned_board_avatar_y": 45.0,
+    "pinned_board_rotation_speed": 2.1,
+    "pinned_board_author_x": 50.0,
+    "pinned_board_author_y": 38.0,
+    "pinned_board_content_x": 50.0,
+    "pinned_board_content_y": 8.0,
     "notification_display_modes": {
       "like": "legacy",
       "comment": "chat",
@@ -253,17 +399,17 @@
     "absorption_hearts_per_rose": 2.0,
     "money_gun_arrow_count": 32,
     "universe_effect_level": 2,
-    "follow_mob_type": "pillager",
-    "follow_spawn_count": 3,
-    "comment_mob_type": "cow",
+    "follow_mob_type": "enderman",
+    "follow_spawn_count": 1,
+    "comment_mob_type": "zombie",
     "comment_spawn_count": 1,
     "share_mob_type": "skeleton",
     "share_spawn_count": 1,
-    "like_mob_type": "enderman",
+    "like_mob_type": "item:minecraft:totem_of_undying",
     "like_spawn_count": 1,
     "likes_per_skeleton": 500,
     "comment_limit": 1,
-    "comment_cooldown_seconds": 1.0,
+    "comment_cooldown_seconds": 30.0,
     "share_limit": 1,
     "share_cooldown_seconds": 60.0,
     "view_mob_type": "pig",

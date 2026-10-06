@@ -12,6 +12,21 @@ from config_service import DEFAULT_BRIDGE_CONFIG
 
 
 class RunnerTests(unittest.TestCase):
+    def test_pinned_comment_test_and_clear_use_bridge_packet(self):
+        config = {**DEFAULT_BRIDGE_CONFIG, "live_comments_only": False}
+        with self.assertRaisesRegex(ValueError, "nhập nội dung"):
+            build_plan(config, {"mode": "pin", "pin_text": "  "})
+        with self.assertRaisesRegex(ValueError, "200 ký tự"):
+            build_plan(config, {"mode": "pin", "pin_text": "x" * 201})
+        with patch("test_runner.send_interaction") as send:
+            runner = TestRunner(lambda *args: None)
+            runner.start(config, {"mode": "pin", "pin_author": "Admin", "pin_text": "  Xin chào   Minecraft "})
+            runner.thread.join(2)
+            self.assertEqual(send.call_args.args[1:6], ("pin_comment", "Admin", "test-pin", "", "Xin chào Minecraft"))
+            runner.start(config, {"mode": "pin_clear"})
+            runner.thread.join(2)
+            self.assertEqual(send.call_args.args[1:6], ("pin_comment", "Admin thử bảng", "test-pin", "", ""))
+
     def test_gift_thanks_once_per_gift_not_per_spawn(self):
         config = {**DEFAULT_BRIDGE_CONFIG, "gift_actions": [
             {"gift_name": "Rose", "action": "mob", "target": "minecraft:zombie", "amount": 10}]}

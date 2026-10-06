@@ -15,6 +15,7 @@ from unittest.mock import Mock, patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / "web"), str(ROOT / "bridge"), str(ROOT / "GUI")]
 import main as web
+import live_panel
 import bridge
 import comment_tts
 import config_service as config
@@ -27,6 +28,7 @@ def isolated_settings():
         gui = {"minecraft_directory": str(root / "minecraft"), "keep_minecraft_running_in_background": True}
         stack.enter_context(patch.object(web, "BRIDGE_CONFIG_PATH", root / "bridge.json"))
         stack.enter_context(patch.object(web, "GUI_STATE_PATH", root / "gui.json"))
+        stack.enter_context(patch.object(live_panel, "PATH", root / "live-panel.json"))
         stack.enter_context(patch.object(web, "load_gui_state", lambda: config.load_json(root / "gui.json", gui)))
         stack.enter_context(patch.object(web, "load_api_key", lambda: ""))
         stack.enter_context(patch.object(web, "save_api_key", lambda key: None))
@@ -47,7 +49,7 @@ class SettingsTests(unittest.TestCase):
     def test_enchant_levels_and_positions_roundtrip(self):
         with isolated_settings() as gui:
             controller = web.Controller()
-            gift = {**config.DEFAULT_GIFT_ACTIONS[0], "target": "enchant_armor", "level": 255}
+            gift = {**config.DEFAULT_GIFT_ACTIONS[0], "action": "special", "target": "enchant_armor", "amount": 1, "level": 255}
             positions = {"comment": {"x": 0, "y": 100, "scale": 4}, "gift": {"x": 100, "y": 0, "scale": 0.5}}
             controller.save({"gui": gui, "bridge": {"gift_actions": [gift]}, "mod": {"notification_positions": positions}})
             saved = controller.state()

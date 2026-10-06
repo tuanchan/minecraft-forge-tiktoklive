@@ -52,6 +52,7 @@
 .save-status{font-size:12px;color:#6eedbc;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .save-status.error{color:#ff899b}
 .test-progress{display:flex;flex-direction:column;gap:12px;margin:16px 0}
+.test-pin-panel textarea{width:100%;min-height:105px;resize:vertical;padding:10px 12px;border:1px solid #405170;border-radius:9px;background:#0b1422;color:var(--text);font:inherit}
 .test-progress progress{width:100%;height:12px;accent-color:var(--cyan)}
 .test-event-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .test-event-buttons small,.test-gift-row small{display:block;color:var(--muted);overflow-wrap:anywhere}
@@ -376,10 +377,18 @@ body{min-width:0;overflow-x:hidden}
 .reward-level-controls label{display:flex;align-items:center;gap:8px;white-space:nowrap}.reward-level{width:78px}
 .position-rows{display:grid;gap:8px}.position-row{display:grid;grid-template-columns:1fr repeat(3,minmax(65px,1fr));align-items:center;gap:12px;padding:10px;background:#0a111d;border-radius:9px}.position-row label{font-size:12px}
 .notification-preview{position:relative;display:block;width:100%;height:auto;aspect-ratio:16/9;padding:0;overflow:hidden;background:linear-gradient(#102136,#1b3434)}
+.board-preview-shell{min-height:260px;display:grid;place-items:center;overflow:auto;padding:20px;background:linear-gradient(145deg,#233449,#142334);border:1px solid var(--line);border-radius:12px}
+#pinnedBoardPreview{position:relative;width:min(100%,540px);aspect-ratio:3.8/1;min-height:132px;background:#1d1d21;border:4px solid #67b4d1;border-radius:13px;box-shadow:0 0 16px #67b4d188,0 12px 28px #0008;overflow:hidden;user-select:none}
+#pinnedBoardTitle{position:absolute;top:9px;left:50%;transform:translateX(-50%);font-family:monospace;font-size:18px;white-space:nowrap;background:linear-gradient(90deg,#ff4268,#ffe85a,#58ef79,#39dbf7,#ec62ff);background-clip:text;color:transparent;text-shadow:none}
+#pinnedBoardContent{position:absolute;left:50%;top:57%;display:grid;gap:5px;min-width:205px;max-width:76%;text-align:center;transform:translate(-50%,-50%);cursor:grab;touch-action:none;color:#f4f7fb;text-shadow:0 2px 2px #000}
+#pinnedBoardContent span{color:#ffd99b;font-weight:700;white-space:nowrap}
+#pinnedBoardContent p{margin:0;line-height:1.25;overflow-wrap:anywhere}
+#pinnedBoardAvatar{position:absolute;left:17%;top:50%;display:grid;place-items:center;width:56px;height:56px;border-radius:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#8a65d6,#403e89);border:2px solid #7bd4e6;color:white;font-size:29px;font-weight:800;cursor:grab;touch-action:none;box-shadow:0 2px 7px #0009}
+#pinnedBoardContent:active,#pinnedBoardAvatar:active{cursor:grabbing}
 #notificationPreviewText{position:absolute;display:grid;gap:6px;text-align:center;max-width:calc(100% - 8px);padding:10px;background:transparent;cursor:grab;touch-action:none;user-select:none}
 #notificationPreviewText strong{font-size:1em}#notificationPreviewText span{font-size:.85em}.bag-preview-icon{position:absolute;right:9px;bottom:9px;width:34px;height:34px;object-fit:contain}
 .gift-bag-help img{float:left;width:42px;height:42px;object-fit:contain;margin-right:10px}
-@media(max-width:700px){.reward-level-controls{grid-column:2/-1;grid-row:3;flex-wrap:wrap;gap:5px}.position-row{gap:6px;padding:7px;grid-template-columns:75px repeat(3,minmax(0,1fr))}.position-row input[type=number]{padding:6px;width:100%}}
+@media(max-width:700px){.reward-level-controls{grid-column:2/-1;grid-row:auto;flex-wrap:wrap;gap:5px}.reward-level-controls label{flex-wrap:wrap;white-space:normal;min-width:0;max-width:100%}.reward-level-controls select{width:auto;max-width:100%}.position-row{gap:6px;padding:7px;grid-template-columns:75px repeat(3,minmax(0,1fr))}.position-row input[type=number]{padding:6px;width:100%}}
 
 .reward-level-controls small{font-size:11px}
 .voice-catalog-status{margin:0;color:var(--muted);font-size:13px;white-space:pre-line;overflow-wrap:anywhere}
@@ -435,3 +444,26 @@ body{min-width:0;overflow-x:hidden}
 .event-editor[data-prefix=view] label:has(#view_enabled){flex-direction:row;align-items:center;justify-content:flex-start;gap:10px}
 .event-editor[data-prefix=view] .event-tuning>small{grid-column:1/-1;line-height:1.6}
 .event-editor #view_enabled{width:18px;height:18px;flex:0 0 18px}
+
+.reward-options{flex-wrap:wrap}.reward-option{width:90px}.reward-options label{white-space:normal}
+
+#pinnedBoardPreview .board-pin{position:absolute;right:12px;top:8px;width:28px;height:28px;background:#ef3434;mask:url('/icon/thumbtack-solid-full.svg') center/contain no-repeat;transform:rotate(24deg);pointer-events:none}
+.board-resize{position:absolute;z-index:5;touch-action:none}
+.board-resize-n,.board-resize-s{left:14px;right:14px;height:9px;cursor:ns-resize}
+.board-resize-n{top:0}.board-resize-s{bottom:0}
+.board-resize-e,.board-resize-w{top:14px;bottom:14px;width:9px;cursor:ew-resize}
+.board-resize-e{right:0}.board-resize-w{left:0}
+.board-resize-ne,.board-resize-nw,.board-resize-se,.board-resize-sw{width:14px;height:14px;background:#fff9;border:2px solid #63dbf0;border-radius:3px}
+.board-resize-ne{right:0;top:0;cursor:nesw-resize}.board-resize-nw{left:0;top:0;cursor:nwse-resize}
+.board-resize-se{right:0;bottom:0;cursor:nwse-resize}.board-resize-sw{left:0;bottom:0;cursor:nesw-resize}
+
+#pinnedBoardAuthor{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-weight:700;color:#ffd99b;text-align:center;cursor:grab;touch-action:none;text-shadow:0 2px 2px #000;max-width:76%;overflow-wrap:anywhere}
+#pinnedBoardAuthor:active{cursor:grabbing}
+.enchant-controls { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 12px; border: 1px solid #7651aa66; border-radius: 10px; min-width: 0; }
+.enchant-controls > label, .enchant-entry > label { display: grid; gap: 5px; }
+.enchant-controls input[type=number] { width: 90px; }
+.enchant-controls > small { flex-basis: 100%; opacity: .8; }
+.enchant-entries { flex-basis: 100%; display: grid; gap: 10px; min-width: 0; }
+.enchant-entry { display: grid; grid-template-columns: minmax(0, 1fr) 90px 36px; gap: 10px; align-items: end; }
+.enchant-entry .search-dropdown { min-width: 0; }
+.enchant-entry .dropdown-toggle span { white-space: normal; text-align: left; }

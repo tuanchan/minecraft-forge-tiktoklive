@@ -91,7 +91,7 @@ function iconUrl(entry) {
 }
 
 function eventMobImage(prefix, mob) {
-  const normalize = target => String(target || "").replace(/^minecraft:/, "");
+  const normalize = target => String(target || "").replace(/^(item|special):/, "").replace(/^minecraft:/, "");
   const bound = state.bridge.event_image_targets?.[prefix];
   return bound && normalize(bound) === normalize(mob.target)
     ? state.bridge.event_images?.[prefix] || iconUrl(mob) : iconUrl(mob);
@@ -100,8 +100,14 @@ function eventMobImage(prefix, mob) {
 function allRewards() {
   return [...state.catalog.special, ...state.catalog.items, ...state.catalog.mobs];
 }
+function giftRewards() {
+  return [...state.catalog.special, ...(state.catalog.enchantments || []).map(e => ({
+    kind: 'special', target: 'enchant_weapon', enchantment_id: e.id,
+    vietnamese_name: `Phù phép ${e.name} · ${e.english_name}`, group: `Enchant ${e.id}`,
+  })), ...state.catalog.items, ...state.catalog.mobs];
+}
 
-function rewardKey(entry) { return `${entry.kind}|${entry.target}`; }
+function rewardKey(entry) { return `${entry.kind}|${entry.target}${entry.enchantment_id ? `|${entry.enchantment_id}` : ''}`; }
 function findReward(rule) { return allRewards().find(x => x.kind === rule.action && x.target === rule.target); }
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
@@ -178,6 +184,7 @@ function showSettingsTab(id) {
     button.setAttribute("aria-selected", String(active));
   });
   if (id === "settingsPosition") requestAnimationFrame(renderSettingsPreview);
+  if (id === "settingsPinnedBoard") requestAnimationFrame(renderPinnedBoardPreview);
 }
 
 function showTab(name) {
@@ -187,6 +194,8 @@ function showTab(name) {
   $$(".tab").forEach(x => x.classList.toggle("active", x.dataset.tab === name));
   $$(".view[data-view]").forEach(x => x.classList.toggle("active", x.dataset.view === name));
   if (name === "tests" && state) renderTests();
+  if (name === "gifts" && state && mappings.some(rule => rule.target === 'mission_penalty')) renderMappings();
+  if (name === "settings") requestAnimationFrame(renderPinnedBoardPreview);
   if (name === "voicevox") requestAnimationFrame(renderGiftSettings);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -203,24 +212,35 @@ function checked(id) { return Boolean($(`#${id}`)?.checked); }
 function setValue(id, value) { const node = $(`#${id}`); if (node) node.value = value ?? ""; }
 function setChecked(id, value) { const node = $(`#${id}`); if (node) node.checked = Boolean(value); }
 
+function eventRewardValue(entry) {
+  return entry.kind === "mob" ? entry.target : `${entry.kind}:${entry.target}`;
+}
+
+function eventReward(raw) {
+  raw = String(raw || "zombie");
+  const match = raw.match(/^(item|special):(.*)$/);
+  const kind = match ? match[1] : "mob";
+  const target = match ? match[2] : raw.includes(":") ? raw : `minecraft:${raw}`;
+  return allRewards().find(item => item.kind === kind && item.target === target) || { kind, target };
+}
+
 function renderEvents() {
   // Move existing inputs to retain their values across preview refreshes.
   const tuningGroups = $$(".event-tuning");
   $("#eventEditors").innerHTML = eventTypes.map(type => {
     const target = state.bridge[`${type.prefix}_mob_type`] || type.fallback;
-    const fullTarget = target.includes(":") ? target : `minecraft:${target}`;
-    const mob = state.catalog.mobs.find(item => item.target === fullTarget) || { kind: "mob", target: fullTarget };
-    const label = type.prefix === "like" ? "Số tim mỗi lượt" : type.prefix === "view" ? "Số mob / view / đợt" : "Số mob mỗi sự kiện";
+    const mob = eventReward(target);
+    const label = type.prefix === "like" ? "Số tim mỗi lượt" : type.prefix === "view" ? "Số phần thưởng / view / đợt" : "Số phần thưởng mỗi sự kiện";
     const customImage = state.bridge.event_images?.[type.prefix] || "";
     return `<article class="panel event-editor" data-prefix="${type.prefix}">
-      <header class="event-editor-heading"><img src="${type.icon}" alt=""><div><h3>${type.subtitle}</h3><small>${type.title} · ${type.prefix === "like" ? "Tích lũy tim riêng từng người" : type.prefix === "view" ? "Có người xem là tạo mob theo chu kỳ" : "Tạo mob cho người tương tác"}</small></div></header>
+      <header class="event-editor-heading"><img src="${type.icon}" alt=""><div><h3>${type.subtitle}</h3><small>${type.title} · ${type.prefix === "like" ? "Tích lũy tim riêng từng người" : type.prefix === "view" ? "Có người xem là trao phần thưởng theo chu kỳ" : "Trao phần thưởng cho người tương tác"}</small></div></header>
       <div class="event-editor-mob">
       <div class="event-image-editor">
         <img class="event-preview" src="${escapeHtml(eventMobImage(type.prefix, mob))}" alt="">
-        <label class="image-picker">Đổi ảnh mob<input class="event-image-input" type="file" accept="image/png,image/jpeg,image/webp"></label>
+        <label class="image-picker">Đổi ảnh<input class="event-image-input" type="file" accept="image/png,image/jpeg,image/webp"></label>
       </div>
-      <div><label>Mob được tạo
-        ${dropdownMarkup("event-mob-dropdown", mob.target, `${mob.vietnamese_name || mob.target} — ${mob.target}`, "Tìm mob trong danh sách…")}
+      <div><label>Mob / quà được trao
+        ${dropdownMarkup("event-mob-dropdown", eventRewardValue(mob), `${mob.vietnamese_name || mob.target} — ${mob.target}`, "Tìm mob, vật phẩm (Totem), hiệu ứng…")}
       </label></div>
       </div>
       <div class="event-editor-settings"><label>${label}<input class="event-count" type="number" min="1" max="${type.prefix === "like" ? 100000 : 100}"></label></div>
@@ -230,19 +250,17 @@ function renderEvents() {
   tuningGroups.forEach(group => $(`.event-editor[data-prefix="${group.dataset.event}"] .event-editor-settings`).append(group));
   $$(".event-editor").forEach(card => {
     const prefix = card.dataset.prefix;
-    const raw = state.bridge[`${prefix}_mob_type`] || eventTypes.find(x => x.prefix === prefix).fallback;
-    const target = raw.includes(":") ? raw : `minecraft:${raw}`;
-    const selectedMob = state.catalog.mobs.find(item => item.target === target);
     const dropdown = $(".event-mob-dropdown", card);
     $(".event-count", card).value = prefix === "like" ? state.bridge.likes_per_skeleton : state.bridge[`${prefix}_spawn_count`];
-    mountSearchDropdown(dropdown, state.catalog.mobs, {
-      getValue: item => item.target,
-      getLabel: item => `${item.vietnamese_name} — ${item.target}`,
+    mountSearchDropdown(dropdown, allRewards(), {
+      getValue: eventRewardValue,
+      getLabel: item => `${item.kind === "mob" ? "Mob" : item.kind === "item" ? "Vật phẩm" : "Hiệu ứng"} · ${item.vietnamese_name || item.target} — ${item.target}`,
       getImage: iconUrl,
       onSelect: mob => {
         delete state.bridge.event_images?.[prefix];
         delete state.bridge.event_image_targets?.[prefix];
         $(".event-preview", card).src = iconUrl(mob);
+        updateEventRule(card);
         renderLivePanel();
       },
     });
@@ -256,19 +274,19 @@ function renderEvents() {
 function updateEventRule(card) {
   const prefix = card.dataset.prefix;
   const count = Number($(".event-count", card).value) || 1;
-  let rule = `Mỗi lượt theo dõi tạo ${count} mob cho người đó.`;
-  if (prefix === "view") rule = checked("view_enabled") ? `Mỗi người được nhận diện tạo ${count} mob; lặp lại sau ${numberValue("view_interval_seconds", 60)} giây. Tối đa ${numberValue("view_max_mobs_per_round", 20)} mob mỗi đợt. Mob mang tên từng tài khoản đã nhận diện khi vào LIVE hoặc tương tác.` : "Đã tắt tạo mob theo View.";
-  if (prefix === "like") rule = `Mỗi người đủ ${count} tim → ${numberValue("like_spawn_count", 1)} mob. Tim dư giữ lại cho chính người đó.`;
+  let rule = `Mỗi lượt theo dõi tạo ${count} phần thưởng cho người đó.`;
+  if (prefix === "view") rule = checked("view_enabled") ? `Mỗi người được nhận diện tạo ${count} phần thưởng; lặp lại sau ${numberValue("view_interval_seconds", 60)} giây. Tối đa ${numberValue("view_max_mobs_per_round", 20)} phần thưởng mỗi đợt. Mob mang tên từng tài khoản đã nhận diện khi vào LIVE hoặc tương tác.` : "Đã tắt trao phần thưởng theo View.";
+  if (prefix === "like") rule = `Mỗi người đủ ${count} tim → ${numberValue("like_spawn_count", 1)} phần thưởng. Tim dư giữ lại cho chính người đó.`;
   if (prefix === "comment" || prefix === "share") {
     const label = prefix === "comment" ? "bình luận" : "chia sẻ";
-    rule = `Mỗi ${label} tạo ${count} mob. Sau ${numberValue(`${prefix}_limit`, 1)} lượt của cùng một người, người đó chờ ${numberValue(`${prefix}_cooldown_seconds`, 10)} giây.`;
+    rule = `Mỗi ${label} tạo ${count} phần thưởng. Sau ${numberValue(`${prefix}_limit`, 1)} lượt của cùng một người, người đó chờ ${numberValue(`${prefix}_cooldown_seconds`, 10)} giây.`;
   }
   $(".event-rule", card).textContent = rule;
 }
 
 async function uploadEventImage(prefix, file, card) {
   if (!file) return;
-  if (file.size > 5 * 1024 * 1024) return toast("Ảnh mob phải nhỏ hơn 5 MB", true);
+  if (file.size > 5 * 1024 * 1024) return toast("Ảnh phải nhỏ hơn 5 MB", true);
   try {
     const dataUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -280,9 +298,9 @@ async function uploadEventImage(prefix, file, card) {
     const result = await api("/api/upload-image", { method: "POST", body: JSON.stringify({ slot: prefix, data_url: dataUrl, mob_target: mobTarget }) });
     state.bridge.event_images = { ...(state.bridge.event_images || {}), [prefix]: result.url };
     state.bridge.event_image_targets = { ...(state.bridge.event_image_targets || {}), [prefix]: result.mob_target };
-    $(".event-preview", card).src = eventMobImage(prefix, {kind: "mob", target: $(".event-mob-dropdown", card).dataset.value});
+    $(".event-preview", card).src = eventMobImage(prefix, eventReward($(".event-mob-dropdown", card).dataset.value));
     renderLivePanel();
-    toast("Đã thay ảnh mob. Cấu hình sẽ được lưu tự động.");
+    toast("Đã thay ảnh phần thưởng. Cấu hình sẽ được lưu tự động.");
   } catch (error) { toast(error.message, true); }
 }
 
@@ -306,7 +324,7 @@ function renderGiftSources() {
 
 function renderRewardSources() {
   const query = $("#rewardSearch").value.trim().toLowerCase();
-  const rewards = allRewards().filter(item => (rewardFilter === "all" || item.kind === rewardFilter) && `${item.vietnamese_name} ${item.target} ${item.group}`.toLowerCase().includes(query)).slice(0, 160);
+  const rewards = giftRewards().filter(item => (rewardFilter === "all" || item.kind === rewardFilter) && `${item.vietnamese_name} ${item.target} ${item.group}`.toLowerCase().includes(query)).slice(0, 160);
   $("#rewardSource").innerHTML = rewards.map(item => `<div class="reward-card" draggable="true" title="${escapeHtml(item.vietnamese_name)}" data-reward="${escapeHtml(rewardKey(item))}">
     <img loading="lazy" src="${iconUrl(item)}" alt=""><b>${escapeHtml(item.vietnamese_name)}</b><small>${escapeHtml(item.target)}</small>
   </div>`).join("") || `<div class="empty show">Không tìm thấy phần thưởng</div>`;
@@ -347,15 +365,104 @@ function applyGift(index, giftIndex) {
 }
 
 function applyReward(index, key) {
-  const [kind, target] = key.split("|");
+  const [kind, target, enchantmentId] = key.split("|");
   if (!mappings[index] || !target) return;
   mappings[index].action = kind; mappings[index].target = target;
   mappings[index].level = target.startsWith("enchant_") ? 0 : 1;
+  if (enchantmentId) {
+    mappings[index].enchant_mode = 'selected';
+    mappings[index].enchantments = [{ id: enchantmentId, level: 1 }];
+  }
+  if (!target.startsWith('enchant_')) {
+    delete mappings[index].enchant_mode;
+    delete mappings[index].enchantments;
+  }
   renderMappings(); renderLivePanel();
 }
 
+function enchantLabel(entry) { return `${entry.name} · ${entry.english_name} · ${entry.id}`; }
+function enchantControls(rule) {
+  if (rule.action !== 'special' || !['enchant_armor', 'enchant_weapon'].includes(rule.target)) return '';
+  const chosen = rule.enchant_mode === 'selected';
+  const entries = rule.enchantments || [];
+  const catalog = state.catalog.enchantments || [];
+  return `<div class="enchant-controls"><label>Chế độ phù phép<select class="enchant-mode"><option value="full" ${!chosen ? 'selected' : ''}>FULL phù hợp với đồ</option><option value="selected" ${chosen ? 'selected' : ''}>Tự chọn loại và cấp</option></select></label>
+    ${chosen ? `<label>Số loại phù phép<input class="enchant-count" type="number" min="1" max="${catalog.length}" step="1" value="${entries.length}"></label>
+    <div class="enchant-entries">${entries.map((entry, i) => {
+      const item = catalog.find(e => e.id === entry.id);
+      return `<div class="enchant-entry" data-enchant-index="${i}">${dropdownMarkup('enchant-select', entry.id, item ? enchantLabel(item) : entry.id, 'Tìm tên phù phép hoặc ID…')}<label>Cấp<input class="enchant-level" type="number" min="1" max="255" step="1" value="${Number(entry.level)}"></label><button type="button" class="enchant-remove" ${entries.length <= 1 ? 'disabled' : ''} title="Bỏ loại phù phép">✕</button></div>`;
+    }).join('')}</div><button type="button" class="enchant-add" ${entries.length >= catalog.length ? 'disabled' : ''}>+ Thêm loại phù phép</button><small>Chọn được mọi loại, cả lời nguyền và các loại xung đột. Cấp 1–255; giữ cấp đang có nếu cao hơn. Hiệu ứng chỉ hoạt động khi Minecraft hỗ trợ món đồ đó.</small>` : '<small>FULL lấy các loại phù hợp với đồ, không gồm lời nguyền.</small>'}
+  </div>`;
+}
+
+function mountEnchantControls(row, index) {
+  const rule = mappings[index], catalog = state.catalog.enchantments || [];
+  const refresh = () => { renderMappings(); renderLivePanel(); };
+  const resize = count => {
+    const entries = (rule.enchantments || []).slice(0, count);
+    for (const item of catalog) {
+      if (entries.length >= count) break;
+      if (!entries.some(e => e.id === item.id)) entries.push({id: item.id, level: 1});
+    }
+    rule.enchantments = entries; refresh();
+  };
+  $('.enchant-mode', row)?.addEventListener('change', event => {
+    rule.enchant_mode = event.target.value;
+    if (rule.enchant_mode === 'selected' && !rule.enchantments?.length) {
+      rule.enchantments = [{id: 'minecraft:unbreaking', level: 1}];
+    }
+    refresh();
+  });
+  $('.enchant-count', row)?.addEventListener('change', event => {
+    if (event.target.value !== '' && event.target.checkValidity()) resize(event.target.valueAsNumber);
+    else event.target.value = rule.enchantments.length;
+  });
+  $('.enchant-add', row)?.addEventListener('click', () => resize(Math.min(catalog.length, rule.enchantments.length + 1)));
+  $$('.enchant-entry', row).forEach(entryRow => {
+    const i = Number(entryRow.dataset.enchantIndex);
+    mountSearchDropdown($('.enchant-select', entryRow), catalog.filter(e => e.id === rule.enchantments[i].id || !rule.enchantments.some(other => other.id === e.id)), {
+      getValue: e => e.id, getLabel: enchantLabel,
+      getImage: () => iconUrl({kind:'item', target:'minecraft:enchanted_book'}),
+      onSelect: e => { rule.enchantments[i].id = e.id; refresh(); },
+    });
+    const input = $('.enchant-level', entryRow);
+    input.addEventListener('input', () => {
+      if (input.value !== '' && input.checkValidity()) { rule.enchantments[i].level = input.valueAsNumber; renderLivePanel(); }
+    });
+    input.addEventListener('blur', () => {
+      if (input.value === '' || !input.checkValidity()) input.value = rule.enchantments[i].level;
+    });
+    $('.enchant-remove', entryRow).addEventListener('click', () => {
+      if (rule.enchantments.length > 1) { rule.enchantments.splice(i, 1); refresh(); }
+    });
+  });
+}
+
+const rewardOptionFields = {
+  mission_penalty: [['penalty', 'Điểm trừ mỗi lượt', 1, 1, 2147483647]],
+  lightning_player: [['strike_count', 'Số tia sét mỗi đợt', 5, 1, 2147483647], ['interval_seconds', 'Nghỉ giữa các tia (giây; 0 = mỗi tick)', 1, 0, 107374182.35]],
+  troll_pumpkin: [['duration_seconds', 'Thời gian đội bí ngô (giây)', 10, 0.1, 3600]],
+  spawn_tnt: [['fuse_seconds', 'Thời gian nổ TNT (giây; 0 = nổ ngay)', 4, 0, 3600]],
+  troll_anvil: [['distance', 'Khoảng cách đe (block; 0 = ngay đầu)', 0, 0, 64]],
+  sky_launch: [['height', 'Độ cao mỗi lượt (block; cộng dồn)', 96, 1, 2048]],
+  troll_cobweb: [['radius', 'Bán kính tơ nhện (block)', 0, 0, 16], ['duration_seconds', 'Thời gian tơ nhện (giây)', 5, 0.1, 3600]],
+};
+function rewardOptionsMarkup(rule) {
+  const explosion = ['creeper', 'minecraft:creeper', 'troll_creeper', 'spawn_tnt'].includes(rule.target);
+  const blockControl = explosion ? `<div class="reward-level-controls"><label>Phá khối khi nổ<select class="reward-blocks"><option value="default" ${rule.break_blocks == null ? 'selected' : ''}>Theo cài đặt mod</option><option value="true" ${rule.break_blocks === true ? 'selected' : ''}>Bật</option><option value="false" ${rule.break_blocks === false ? 'selected' : ''}>Tắt</option></select></label></div>` : '';
+  if (rule.action !== 'special') return blockControl;
+  const missionChoices = window.missionChoices?.() || [];
+  const missionId = rule.mission_id || '*';
+  const missionControl = rule.target === 'mission_penalty' ? `<div class="reward-level-controls"><label>Nhiệm vụ bị trừ<select class="reward-mission"><option value="*">Tất cả nhiệm vụ đang bật</option>${missionChoices.map(m=>`<option value="${escapeHtml(m.id)}" ${m.id===missionId?'selected':''}>${escapeHtml(m.title)}</option>`).join('')}${missionId!=='*'&&!missionChoices.some(m=>m.id===missionId)?`<option selected value="${escapeHtml(missionId)}">${escapeHtml(missionId)} (chưa có trong cấu hình)</option>`:''}</select></label></div>` : '';
+  const damageControl = rule.target === 'spawn_tnt' ? `<div class="reward-level-controls"><label>Gây sát thương người chơi<select class="reward-player-damage"><option value="true" ${rule.damage_players !== false ? 'selected' : ''}>Bật</option><option value="false" ${rule.damage_players === false ? 'selected' : ''}>Tắt</option></select></label></div>` : '';
+  const fields = rewardOptionFields[rule.target] || [];
+  const hint = rule.target === "lightning_player" ? '<small class="reward-level-controls">Số lượng quà = số đợt; mỗi đợt có số tia bên dưới. Các đợt nối tiếp, tia bám vị trí hiện tại kể cả trong nhà. 1 tick ≈ 0,05 giây.</small>' : rule.target === "clear_tool_mobs" ? '<small class="reward-level-controls">Diệt mob của tool đang tải ở mọi chiều; chừa người chơi, golem và chó. Chat ghi tên người tặng và tên từng mob bị giết.</small>' : "";
+  return missionControl + blockControl + damageControl + hint + (fields.length ? '<div class="reward-level-controls reward-options">' + fields.map(([key, label, initial, min, max]) =>
+    `<label>${label}<input class="reward-option" data-option="${key}" type="number" step="${['strike_count','penalty'].includes(key) ? 1 : 'any'}" min="${min}" max="${max}" value="${Number(rule[key] ?? initial)}"></label>`).join('') + '</div>' : '');
+}
+
 function renderMappings() {
-  const rewards = allRewards();
+  const rewards = giftRewards();
   const rewardLabel = item => `${item.vietnamese_name} — ${item.target}`;
   $("#mappingList").innerHTML = mappings.map((rule, index) => {
     const reward = findReward(rule) || { kind: rule.action, target: rule.target, vietnamese_name: rule.target };
@@ -365,16 +472,38 @@ function renderMappings() {
       ${dropdownMarkup("gift-select", rule.gift_id || rule.gift_name, `${rule.gift_name}${rule.gift_id ? ` · ID ${rule.gift_id}` : ""}`, "Tìm quà theo tên, xu hoặc Gift ID…")}
       <span class="arrow">→</span>
       <img class="mapping-icon" src="${iconUrl(reward)}" alt="">
-      ${dropdownMarkup("reward-select", rewardKey(reward), rewardLabel(reward), "Tìm mob hoặc vật phẩm…")}
+      ${dropdownMarkup("reward-select", rewardKey(reward), rewardLabel(reward), "Tìm mob, vật phẩm hoặc phù phép…")}
       <input class="amount" type="number" min="1" max="100" value="${Number(rule.amount || 1)}" title="Số lượng">
       <button class="delete" title="Xóa quà">✕</button>
-      ${rule.action === "special" && ["enchant_armor", "enchant_weapon", "experience"].includes(rule.target) ? `<div class="reward-level-controls"><label>${rule.target === "experience" ? "Cấp kinh nghiệm" : "Cấp enchant"}<input class="reward-level" type="number" min="${rule.target === "experience" ? 1 : 0}" max="255" value="${Number(rule.level ?? (rule.target.startsWith("enchant_") ? 0 : 1))}"></label><small>${rule.target === "experience" ? "1–255 cấp mỗi lần nhận" : "0 = tối đa tự nhiên từng enchant · 1–255 = cấp chỉ định · không gồm lời nguyền"}</small></div>` : ""}
+      ${rewardOptionsMarkup(rule)}
+      ${enchantControls(rule)}
+      ${rule.action === "special" && ["enchant_armor", "enchant_weapon", "experience"].includes(rule.target) && rule.enchant_mode !== "selected" ? `<div class="reward-level-controls"><label>${rule.target === "experience" ? "Cấp kinh nghiệm" : "Cấp enchant"}<input class="reward-level" type="number" min="${rule.target === "experience" ? 1 : 0}" max="255" value="${Number(rule.level ?? (rule.target.startsWith("enchant_") ? 0 : 1))}"></label><small>${rule.target === "experience" ? "1–255 cấp mỗi lần nhận" : "0 = tối đa tự nhiên từng enchant · 1–255 = cấp chỉ định · không gồm lời nguyền"}</small></div>` : ""}
     </div>`;
   }).join("");
   $("#emptyMappings").classList.toggle("show", mappings.length === 0);
   $$(".mapping-row").forEach(row => {
     const index = Number(row.dataset.index);
+    mountEnchantControls(row, index);
     row.addEventListener("click", () => selectedMapping = index);
+    $$(".reward-option", row).forEach(input => {
+      input.addEventListener("input", () => {
+        // Empty and partially typed numbers are drafts, never Number('') == 0.
+        if (input.value !== '' && Number.isFinite(input.valueAsNumber) && input.checkValidity())
+          updateMapping(index, input.dataset.option, input.valueAsNumber);
+      });
+      input.addEventListener("blur", () => {
+        if (input.value === '' || !Number.isFinite(input.valueAsNumber)) {
+          const field = rewardOptionFields[mappings[index].target].find(([key]) => key === input.dataset.option);
+          input.value = mappings[index][input.dataset.option] ?? field[2];
+          scheduleAutoSave();
+        }
+      });
+    });
+    $(".reward-blocks", row)?.addEventListener("change", event => updateMapping(index, "break_blocks",
+      event.target.value === "default" ? null : event.target.value === "true"));
+    $(".reward-player-damage", row)?.addEventListener("change", event => updateMapping(index, "damage_players",
+      event.target.value === "true"));
+    $(".reward-mission", row)?.addEventListener("change", event => updateMapping(index, "mission_id", event.target.value));
     $(".reward-level", row)?.addEventListener("input", event => updateMapping(index, "level", Number(event.target.value)));
     $(".amount", row).addEventListener("input", event => updateMapping(index, "amount", Math.max(1, Number(event.target.value || 1))));
     mountSearchDropdown($(".gift-select", row), state.gifts, {
@@ -438,6 +567,7 @@ function applyPanelPreview(preview) {
   state.bridge = { ...state.bridge, ...preview.bridge, event_images: { ...(preview.bridge.event_images || {}) } };
   setValue("like_spawn_count", state.bridge.like_spawn_count);
   mappings = preview.mappings.map(rule => ({ ...rule }));
+  window.initMilestones?.();
   renderEvents();
   renderLivePanel(false);
 }
@@ -446,21 +576,14 @@ function renderLivePanel(publish = true) {
   if (!state) return;
   $("#eventCards").innerHTML = eventTypes.map(type => {
     const editor = $(`.event-editor[data-prefix="${type.prefix}"]`);
-    const target = editor ? $(".event-mob-dropdown", editor).dataset.value : `minecraft:${state.bridge[`${type.prefix}_mob_type`] || type.fallback}`;
+    const target = editor ? $(".event-mob-dropdown", editor).dataset.value : state.bridge[`${type.prefix}_mob_type`] || type.fallback;
     const count = editor ? $(".event-count", editor).value : (type.prefix === "like" ? state.bridge.likes_per_skeleton : state.bridge[`${type.prefix}_spawn_count`]);
-    const mob = state.catalog.mobs.find(x => x.target === target) || { kind: "mob", target };
-    const customImage = state.bridge.event_images?.[type.prefix];
+    const mob = eventReward(target);
     const eventTitle = type.prefix === "like" ? `${count} Tim` : type.title;
-    const spawnCount = type.prefix === "like" ? numberValue("like_spawn_count", state.bridge.like_spawn_count || 1) : count;
-    const viewEnabled = $("#view_enabled") ? checked("view_enabled") : state.bridge.view_enabled !== false;
-    const viewInterval = numberValue("view_interval_seconds", state.bridge.view_interval_seconds || 60);
-    const caption = type.prefix === "view"
-      ? (viewEnabled ? `${spawnCount} mob / người · ${viewInterval} giây` : "Đã tắt tạo mob theo View")
-      : `Tạo ${spawnCount} mob`;
     return `<div class="event-card event-${type.prefix}" data-event-kind="${type.prefix}">
       <div class="event-card-title"><img class="event-action-icon" src="${type.icon}" alt=""><b>${escapeHtml(eventTitle)}</b></div>
       <div class="mob-stage"><img src="${escapeHtml(eventMobImage(type.prefix, mob))}" alt=""></div>
-      <div class="event-caption"><strong>${escapeHtml(mob.vietnamese_name || target)}</strong><small>${escapeHtml(caption)}</small></div>
+      <div class="event-caption"><strong>${escapeHtml(mob.vietnamese_name || target)}</strong></div>
     </div>`;
   }).join("");
   $("#giftPreview").innerHTML = mappings.map((rule, index) => {
@@ -471,9 +594,10 @@ function renderLivePanel(publish = true) {
       <b class="gift-amount">${Number(rule.amount || 1)}x</b>
       <div class="gift-top"><b>${escapeHtml(rule.gift_name)}</b>${giftImageMarkup(rule, "tiktok-gift-image")}</div>
       <span class="gift-divider">◆</span>
-      <div class="reward-bottom"><img src="${iconUrl(reward)}" alt=""><div class="reward-caption"><strong>${escapeHtml(reward.vietnamese_name)}</strong><small>x${Number(rule.amount || 1)}${rule.target.startsWith("enchant_") ? ` · ${Number(rule.level || 0) === 0 ? "Max" : `Cấp ${Number(rule.level)}`}` : rule.target === "experience" ? ` · ${Number(rule.level || 1)} cấp` : ""}</small></div></div>
+      <div class="reward-bottom"><img src="${iconUrl(reward)}" alt=""><div class="reward-caption"><strong>${escapeHtml(reward.vietnamese_name)}</strong><small>x${Number(rule.amount || 1)}${rule.target.startsWith("enchant_") ? rule.enchant_mode === 'selected' ? ` · ${(rule.enchantments || []).length} loại phù phép` : ` · ${Number(rule.level || 0) === 0 ? "Max" : `Cấp ${Number(rule.level)}`}` : rule.target === "experience" ? ` · ${Number(rule.level || 1)} cấp` : ""}</small></div></div>
     </div>`;
   }).join("") || `<div class="empty show">Chưa gán quà</div>`;
+  window.renderMilestonePanels?.();
   if (publish) { publishPanelPreview(); scheduleAutoSave(); }
 }
 
@@ -859,6 +983,14 @@ async function launchTest(mode, extra = {}) {
   if (testSubmitting || testRunning) return;
   testSubmitting = true; updateTestButtons();
   try {
+    if (mode === "pin" || mode === "pin_clear") {
+      const pinText = value("testPinContent").replace(/\s+/g, " ").trim();
+      if (mode === "pin" && !pinText) throw new Error("Hãy nhập nội dung bình luận ghim.");
+      updateTestStatus(await api("/api/test", { method: "POST", body: JSON.stringify({
+        mode, pin_author: value("testPinAuthor"), pin_text: pinText,
+      }) }));
+      return;
+    }
     const ids = mode === "spam" ? ["testSpamUsers", "testSpamCount", "testSpamInterval"] : ["testUsers", "testCount", "testInterval"];
     for (const id of ids) if (!$(`#${id}`).checkValidity() || value(id) === "") throw new Error("Hãy điền thông số test đúng khoảng cho phép.");
     await save(false);
@@ -873,6 +1005,8 @@ async function launchTest(mode, extra = {}) {
 }
 
 function bindTests() {
+  $("#testPinBtn").addEventListener("click", () => launchTest("pin"));
+  $("#testUnpinBtn").addEventListener("click", () => toast("Trong Minecraft, ngắm vào bảng cần xóa rồi nhấn X. Các bảng khác được giữ nguyên."));
   $("#testSingleMobBtn").addEventListener("click", () => launchTest("mob"));
   $("#testFullMobsBtn").addEventListener("click", () => launchTest("all_mobs"));
   $("#testSpamBtn").addEventListener("click", () => launchTest("spam"));
@@ -885,8 +1019,94 @@ function bindTests() {
   });
 }
 
+const boardPalette = {black:"#202124",gray:"#55565b",light_gray:"#a7a7a7",white:"#e5e5e5",blue:"#343b79",light_blue:"#67b4d1",cyan:"#238995",purple:"#7446a0",magenta:"#bd55b7",pink:"#e790ae",red:"#a73132",orange:"#df8432",yellow:"#eccd4e",lime:"#84b931",green:"#4c8234",brown:"#79583b"};
+
+function renderPinnedBoardPreview() {
+  const preview = $("#pinnedBoardPreview");
+  if (!preview) return;
+  const number = (id, fallback) => Number.isFinite(Number(value(id))) && value(id) !== "" ? Number(value(id)) : fallback;
+  const scale = number("pinned_board_scale", 1);
+  const textScale = number("pinned_board_text_scale", 1);
+  const avatarScale = number("pinned_board_avatar_scale", 1);
+  preview.style.width = `${Math.round(500 * scale * number("pinned_board_width", 1))}px`;
+  preview.style.height = `${Math.round(150 * scale * number("pinned_board_height", 1))}px`;
+  preview.style.minHeight = "0";
+  preview.style.aspectRatio = "auto";
+  preview.style.maxWidth = "100%";
+  preview.style.background = boardPalette[value("pinned_board_background")] || boardPalette.black;
+  const border = boardPalette[value("pinned_board_border")] || boardPalette.light_blue;
+  preview.style.borderColor = border;
+  preview.style.boxShadow = `0 0 16px ${border}88, 0 12px 28px #0008`;
+  preview.style.borderRadius = `${Math.round(number("pinned_board_corner_radius", 0.16) * 80)}px`;
+  const avatar = $("#pinnedBoardAvatar"), content = $("#pinnedBoardContent");
+  avatar.style.left = `${number("pinned_board_avatar_x", 17)}%`;
+  avatar.style.top = `${number("pinned_board_avatar_y", 50)}%`;
+  avatar.style.width = avatar.style.height = `${Math.round(56 * avatarScale)}px`;
+  content.style.left = `${number("pinned_board_content_x", 50)}%`;
+  content.style.top = `${number("pinned_board_content_y", 50)}%`;
+  content.style.fontSize = `${Math.round(15 * textScale)}px`;
+  $("#pinnedBoardTitle").style.fontSize = `${Math.round(18 * textScale)}px`;
+  const author = $("#pinnedBoardAuthor");
+  author.style.left = `${number("pinned_board_author_x", 50)}%`;
+  author.style.top = `${number("pinned_board_author_y", 38)}%`;
+  author.style.fontSize = `${Math.round(15 * textScale)}px`;
+  author.style.color = value("pinned_board_author_color") || "#ffd99b";
+  content.querySelector("p").style.color = value("pinned_board_comment_color") || "#f4f7fb";
+  applyPinLayout(preview, avatar, author, content, {
+    ax:number("pinned_board_avatar_x",17), ay:number("pinned_board_avatar_y",50),
+    cx:number("pinned_board_content_x",66), cy:number("pinned_board_content_y",60),
+    ny:number("pinned_board_author_y",82)}, scale, textScale, avatarScale);
+}
+
+function bindPinnedBoardPreview() {
+  const preview = $("#pinnedBoardPreview");
+  if (!preview) return;
+  $$('[id^="pinned_board_"]').forEach(input => input.addEventListener("input", renderPinnedBoardPreview));
+  let drag = null, resize = null;
+  preview.addEventListener("pointerdown", event => {
+    const handle = event.target.closest("[data-board-resize]");
+    if (handle) {
+      const rect = preview.getBoundingClientRect();
+      resize = {side:handle.dataset.boardResize, x:event.clientX, y:event.clientY,
+        width:rect.width, height:rect.height, scale:Number(value("pinned_board_scale")),
+        w:Number(value("pinned_board_width")), h:Number(value("pinned_board_height"))};
+      handle.setPointerCapture(event.pointerId);
+      event.preventDefault(); return;
+    }
+    const target = event.target.closest("[data-board-drag]");
+    if (!target || !preview.contains(target)) return;
+    drag = target.dataset.boardDrag;
+    target.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+  preview.addEventListener("pointermove", event => {
+    if (resize) {
+      const dx = (event.clientX - resize.x) * (resize.side.includes("w") ? -1 : 1) * 2 / resize.width;
+      const dy = (event.clientY - resize.y) * (resize.side.includes("n") ? -1 : 1) * 2 / resize.height;
+      const set = (key, v) => {
+        const input = document.getElementById(key);
+        setValue(key, Math.round(Math.max(Number(input.min), Math.min(Number(input.max), v)) * 100) / 100);
+      };
+      if (resize.side.length === 2) set("pinned_board_scale", resize.scale * Math.max(.05, 1 + (dx + dy) / 2));
+      else if (resize.side === "e" || resize.side === "w") set("pinned_board_width", resize.w * (1 + dx));
+      else set("pinned_board_height", resize.h * (1 + dy));
+      renderPinnedBoardPreview(); scheduleAutoSave(); return;
+    }
+    if (!drag) return;
+    const rect = preview.getBoundingClientRect();
+    const x = Math.round(Math.max(0, Math.min(100, (event.clientX - rect.left) * 100 / rect.width)));
+    const y = Math.round(Math.max(0, Math.min(100, (event.clientY - rect.top) * 100 / rect.height)));
+    setValue(`pinned_board_${drag}_x`, x);
+    setValue(`pinned_board_${drag}_y`, y);
+    renderPinnedBoardPreview();
+    scheduleAutoSave();
+  });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(type => preview.addEventListener(type, () => { drag = null; resize = null; }));
+}
+
 function bindStaticEvents() {
   bindTests();
+  bindPinnedBoardPreview();
   window.addEventListener("online", scheduleAutoSave);
   for (const type of ["input", "change"]) document.addEventListener(type, event => {
     const node = event.target;
@@ -897,7 +1117,7 @@ function bindStaticEvents() {
     if (node.matches('input, select')) scheduleAutoSave();
   });
   window.addEventListener("beforeunload", event => {
-    if (autoSaveReady && !document.body.classList.contains("detached-panel") && JSON.stringify(collectPayload()) !== lastSavedPayload) {
+    if (!window.desktopClosing && autoSaveReady && !document.body.classList.contains("detached-panel") && JSON.stringify(collectPayload()) !== lastSavedPayload) {
       save(false).catch(() => {});
       event.preventDefault(); event.returnValue = "";
     }
@@ -984,12 +1204,14 @@ async function initialize() {
     renderGiftSettings();
     renderVoiceChoices();
     renderSettingsPreview();
+    renderPinnedBoardPreview();
+    window.initMilestones?.();
     renderEvents(); renderGiftSources(); renderRewardSources(); renderMappings(); renderLivePanel(); setLiveBadge(state.live_running);
     renderTests();
     lastSavedPayload = JSON.stringify(collectPayload());
     autoSaveReady = true;
     pollRuntimeSettings();
-    if (["live", "events", "gifts", "settings", "voicevox", "tests", "logs"].includes(query.get("view"))) showTab(query.get("view"));
+    if (["live", "events", "gifts", "missions", "settings", "voicevox", "tests", "logs"].includes(query.get("view"))) showTab(query.get("view"));
     $("#loading").remove();
     if (value("tts_provider") === "elevenlabs") loadVoiceCatalog(true);
   } catch (error) { $("#loading").textContent = error.message; toast(error.message, true); }

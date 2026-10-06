@@ -1,0 +1,5 @@
+{
+  "providers": [
+    {"type": "bitmap", "file": "tiktokmob:font/pin.png", "ascent": 9, "height": 10, "chars": ["\ue000"]}
+  ]
+}

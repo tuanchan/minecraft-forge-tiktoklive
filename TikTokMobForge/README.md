@@ -170,3 +170,8 @@ Nếu không dùng GUI, vẫn có thể sửa `bridge\config.json` và chạy c�
 thư mục `bridge`. Cổng `9876` chỉ mở trên máy cục bộ.
 
 TikTokLive là API không chính thức nên có thể cần cập nhật khi TikTok thay đổi hệ thống LIVE.
+
+## Tài liệu và cấu trúc thư mục
+
+Xem [mục lục tài liệu và sơ đồ thư mục](docs/README.md).
+

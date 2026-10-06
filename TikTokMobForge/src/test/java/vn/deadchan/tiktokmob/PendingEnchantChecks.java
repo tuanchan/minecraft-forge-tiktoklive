@@ -13,6 +13,7 @@ final class PendingEnchantChecks {
         if (!value) throw new AssertionError(message);
     }
     static void run(HolderLookup.Provider registries) {
+        selectedChecks(registries);
         int current = 0;
         for (int expected : new int[]{5, 6, 7}) {
             current = SpecialRewards.nextEnchantLevel(current, 5);
@@ -74,5 +75,45 @@ final class PendingEnchantChecks {
         check(levels.equals(List.of(0, 12)), "Multiple pending gifts preserve natural and explicit levels");
         check(data.waitingSlots(owner).isEmpty(), "Multiple gifts consumed once on the first weapon");
         System.out.println("PENDING_ENCHANT_CHECKS_OK: empty/invalid equipment, individual armor slots, weapon, levels, no replay, UUID isolation, save/reload");
+    }
+
+    static void selectedChecks(HolderLookup.Provider registries) {
+        var choices = SpecialRewards.parseSelectedEnchants("""
+            {"enchant_mode":"selected","enchantments":[
+              {"id":"minecraft:sharpness","level":7},
+              {"id":"minecraft:smite","level":12},
+              {"id":"minecraft:binding_curse","level":255}]}
+            """);
+        check(choices.size() == 3, "Count of selected types");
+        check(!SpecialRewards.enchantSelectedStack(registries, ItemStack.EMPTY, choices), "Empty hand waits");
+        var stack = new ItemStack(Items.DIAMOND_PICKAXE);
+        check(SpecialRewards.enchantSelectedStack(registries, stack, choices), "Selected conflicting and unsupported types allowed");
+        var actual = net.minecraft.world.item.enchantment.EnchantmentHelper.getEnchantmentsForCrafting(stack);
+        var lookup = registries.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
+        for (var entry : choices.entrySet()) {
+            var holder = lookup.getOrThrow(net.minecraft.resources.ResourceKey.create(
+                net.minecraft.core.registries.Registries.ENCHANTMENT, net.minecraft.resources.Identifier.parse(entry.getKey())));
+            check(actual.getLevel(holder) == entry.getValue(), "Exact per-type level including curse");
+        }
+        check(actual.size() == 3, "No unselected types added");
+        SpecialRewards.enchantSelectedStack(registries, stack, choices);
+        check(net.minecraft.world.item.enchantment.EnchantmentHelper.getEnchantmentsForCrafting(stack).equals(actual), "Repeated selection does not raise chosen levels");
+        UUID owner = UUID.randomUUID();
+        var data = new PendingEnchantData();
+        data.add(owner, true, 0, choices);
+        var saved = PendingEnchantData.TYPE.codec().encodeStart(JsonOps.INSTANCE, data).getOrThrow();
+        data = PendingEnchantData.TYPE.codec().parse(JsonOps.INSTANCE, saved).getOrThrow();
+        check(data.applyConfigured(owner, (slot, level, selected) -> {
+            check(selected.equals(choices), "Selection survives world reload");
+            return slot == EquipmentSlot.HEAD;
+        }).equals(Set.of(EquipmentSlot.HEAD)), "Selected armor delivered per slot");
+        check(data.waitingSlots(owner).size() == 3, "Unworn armor retains choices");
+        for (String bad : List.of("{\"enchant_mode\":\"selected\",\"enchantments\":[]}",
+                "{\"enchant_mode\":\"selected\",\"enchantments\":[{\"id\":\"minecraft:mending\",\"level\":1.5}]}")) {
+            boolean rejected = false;
+            try { SpecialRewards.parseSelectedEnchants(bad); } catch (RuntimeException expected) { rejected = true; }
+            check(rejected, "Invalid selection rejected without granting FULL");
+        }
+        System.out.println("SELECTED_ENCHANT_CHECKS_OK: levels, conflicts, curses, tools, count, persistence, partial armor, validation");
     }
 }

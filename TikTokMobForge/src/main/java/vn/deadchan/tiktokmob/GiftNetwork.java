@@ -12,11 +12,23 @@ import java.util.function.Consumer;
 
 public final class GiftNetwork {
     public static final SimpleChannel CHANNEL = ChannelBuilder.named("tiktokmob:ui")
-        .networkProtocolVersion(4).simpleChannel();
+        .networkProtocolVersion(12).simpleChannel();
+    public record MissionState(String json) {}
+    static Consumer<MissionState> onMissions = message -> {};
     public record SkyRide(int carrierId) {}
     static Consumer<SkyRide> onSkyRide = message -> {};
     public record Notification(String title, String username, String kind, boolean donation) {}
     public record GiftAlert(String token) {}
+    public record PinnedComment(String author, String text, long revision, BoardPosition position, boolean selectionReply) {}
+    static Consumer<PinnedComment> onPinnedComment = message -> {};
+    public record BoardPosition(double side, double height, double distance, double scale,
+                                boolean grabbing, boolean pinned, boolean paused) {}
+    public record BoardDelete() {}
+    public record BoardSelect() {}
+    public record BoardMove(long revision, BoardPosition position) {}
+    static Consumer<ServerPlayer> onBoardSelect = player -> {};
+    static java.util.function.BiConsumer<ServerPlayer, BoardMove> onBoardPosition = (player, position) -> {};
+    static java.util.function.Consumer<ServerPlayer> onBoardDelete = player -> {};
     static Consumer<GiftAlert> onGiftAlert = message -> {};
     public record UiState(String settings, long giftCount) {}
     public record SettingsPatch(String requestId, String json) {}
@@ -30,6 +42,28 @@ public final class GiftNetwork {
     static Consumer<BagPage> onPage = message -> {};
 
     public static void register() {
+        CHANNEL.messageBuilder(MissionState.class, NetworkDirection.PLAY_TO_CLIENT)
+            .encoder((m, b) -> b.writeUtf(m.json()))
+            .decoder(b -> new MissionState(b.readUtf()))
+            .consumerMainThread((m, c) -> onMissions.accept(m)).add();
+        CHANNEL.messageBuilder(BoardMove.class, NetworkDirection.PLAY_TO_SERVER)
+            .encoder((m, b) -> { b.writeLong(m.revision()); encodePosition(m.position(), b); })
+            .decoder(b -> new BoardMove(b.readLong(), decodePosition(b)))
+            .consumerMainThread((m, c) -> { if (c.getSender() != null) onBoardPosition.accept(c.getSender(), m); }).add();
+        CHANNEL.messageBuilder(BoardSelect.class, NetworkDirection.PLAY_TO_SERVER)
+            .encoder((m, b) -> {}).decoder(b -> new BoardSelect())
+            .consumerMainThread((m, c) -> { if (c.getSender() != null) onBoardSelect.accept(c.getSender()); }).add();
+        CHANNEL.messageBuilder(BoardDelete.class, NetworkDirection.PLAY_TO_SERVER)
+            .encoder((m, b) -> {})
+            .decoder(b -> new BoardDelete())
+            .consumerMainThread((m, c) -> {
+                ServerPlayer player = c.getSender();
+                if (player != null) onBoardDelete.accept(player);
+            }).add();
+        CHANNEL.messageBuilder(PinnedComment.class, NetworkDirection.PLAY_TO_CLIENT)
+            .encoder((m, b) -> { b.writeUtf(m.author, 64); b.writeUtf(m.text, 400); b.writeLong(m.revision); encodePosition(m.position(), b); b.writeBoolean(m.selectionReply()); })
+            .decoder(b -> new PinnedComment(b.readUtf(64), b.readUtf(400), b.readLong(), decodePosition(b), b.readBoolean()))
+            .consumerMainThread((m, c) -> onPinnedComment.accept(m)).add();
         CHANNEL.messageBuilder(SkyRide.class, NetworkDirection.PLAY_TO_CLIENT)
             .encoder((m, b) -> b.writeInt(m.carrierId()))
             .decoder(b -> new SkyRide(b.readInt()))
@@ -89,4 +123,14 @@ public final class GiftNetwork {
     }
     static void send(ServerPlayer player, Object message) { CHANNEL.send(message, PacketDistributor.PLAYER.with(player)); }
     static void request(int page, String id) { CHANNEL.send(new BagRequest(page, id), PacketDistributor.SERVER.noArg()); }
+    static void sendBoardPosition(long revision, BoardPosition position) { CHANNEL.send(new BoardMove(revision, position), PacketDistributor.SERVER.noArg()); }
+    static void selectBoard() { CHANNEL.send(new BoardSelect(), PacketDistributor.SERVER.noArg()); }
+    private static void encodePosition(BoardPosition m, net.minecraft.network.FriendlyByteBuf b) {
+        b.writeDouble(m.side()); b.writeDouble(m.height()); b.writeDouble(m.distance()); b.writeDouble(m.scale());
+        b.writeBoolean(m.grabbing()); b.writeBoolean(m.pinned()); b.writeBoolean(m.paused());
+    }
+    private static BoardPosition decodePosition(net.minecraft.network.FriendlyByteBuf b) {
+        return new BoardPosition(b.readDouble(), b.readDouble(), b.readDouble(), b.readDouble(), b.readBoolean(), b.readBoolean(), b.readBoolean());
+    }
+    static void deleteBoard() { CHANNEL.send(new BoardDelete(), PacketDistributor.SERVER.noArg()); }
 }

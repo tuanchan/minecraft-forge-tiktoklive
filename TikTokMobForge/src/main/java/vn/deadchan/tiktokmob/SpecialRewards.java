@@ -82,14 +82,18 @@ final class SpecialRewards {
         CHASING_TNT.removeIf(chase -> chase.tnt().level().getServer() == server);
     }
 
-    static void spawnTnt(ServerPlayer player) {
+    static void spawnTnt(ServerPlayer player) { spawnTnt(player, ""); }
+
+    static void spawnTnt(ServerPlayer player, String payload) {
         var tnt = new net.minecraft.world.entity.item.PrimedTnt(player.level(),
             player.getX(), player.getY(), player.getZ(), player);
-        tnt.setFuse(80);
+        tnt.setFuse(RewardOptions.ticks(payload, "fuse_seconds", 4));
+        TrollEffects.markToolTnt(tnt, payload);
         if (player.level().addFreshEntity(tnt)) CHASING_TNT.add(new ChasingTnt(tnt, player));
     }
 
     static void clearInventory(ServerPlayer player) {
+        TemporaryPumpkins.forget(player);
         // Clear carried stacks before closing so the menu cannot return them to inventory.
         player.containerMenu.setCarried(ItemStack.EMPTY);
         player.inventoryMenu.setCarried(ItemStack.EMPTY);
@@ -114,11 +118,22 @@ final class SpecialRewards {
         EquipmentSlot.LEGS, EquipmentSlot.FEET);
 
     static void enchant(ServerPlayer player, boolean armor, String payload) {
+        java.util.Map<String, Integer> selected;
+        try {
+            selected = parseSelectedEnchants(payload);
+            // Resolve every ID before queueing; malformed rewards must not turn into FULL.
+            var lookup = player.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+            for (String id : selected.keySet()) lookup.getOrThrow(net.minecraft.resources.ResourceKey.create(
+                Registries.ENCHANTMENT, net.minecraft.resources.Identifier.parse(id)));
+        } catch (RuntimeException error) {
+            player.sendSystemMessage(Component.literal("Quà phù phép không hợp lệ: kiểm tra loại và cấp đã chọn."));
+            return;
+        }
         int requested;
         try { requested = Math.max(0, Math.min(255, Integer.parseInt(payload))); }
         catch (NumberFormatException ignored) { requested = 0; }
         PendingEnchantData data = PendingEnchantData.get(player);
-        data.add(player.getUUID(), armor, requested);
+        data.add(player.getUUID(), armor, requested, selected);
         if (applyPending(player) == 0) {
             player.sendSystemMessage(Component.literal("Đã giữ quà enchant · " + waitingMessage(data.waitingSlots(player.getUUID()))));
         }
@@ -127,13 +142,14 @@ final class SpecialRewards {
     static int applyPending(ServerPlayer player) {
         if (!player.isAlive() || player.isSpectator()) return 0;
         PendingEnchantData data = PendingEnchantData.get(player);
-        Set<EquipmentSlot> applied = data.applyReady(player.getUUID(), (slot, level) ->
-            enchantStack(player.registryAccess(), player.getItemBySlot(slot), slot != EquipmentSlot.MAINHAND, level));
+        Set<EquipmentSlot> applied = data.applyConfigured(player.getUUID(), (slot, level, selected) ->
+            selected.isEmpty() ? enchantStack(player.registryAccess(), player.getItemBySlot(slot), slot != EquipmentSlot.MAINHAND, level)
+                : enchantSelectedStack(player.registryAccess(), player.getItemBySlot(slot), selected));
         if (applied.isEmpty()) return 0;
         player.inventoryMenu.broadcastChanges();
         player.containerMenu.broadcastChanges();
         Set<EquipmentSlot> waiting = data.waitingSlots(player.getUUID());
-        player.sendSystemMessage(Component.literal("Đã enchant đầy đủ " + applied.size() + " món"
+        player.sendSystemMessage(Component.literal("Đã phù phép " + applied.size() + " món"
             + (waiting.isEmpty() ? " · Đã nhận hết quà enchant." : " · " + waitingMessage(waiting))));
         return applied.size();
     }
@@ -162,6 +178,44 @@ final class SpecialRewards {
                 }
             }));
         return applied[0] > 0;
+    }
+
+    static java.util.Map<String, Integer> parseSelectedEnchants(String payload) {
+        if (payload == null || !payload.stripLeading().startsWith("{")) return java.util.Map.of();
+        var object = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
+        if (!object.has("enchant_mode") || !object.get("enchant_mode").getAsString().equals("selected"))
+            throw new IllegalArgumentException("Invalid enchant mode");
+        var entries = object.getAsJsonArray("enchantments");
+        if (entries == null || entries.isEmpty() || entries.size() > 256)
+            throw new IllegalArgumentException("Invalid enchant list");
+        var result = new java.util.LinkedHashMap<String, Integer>();
+        for (var raw : entries) {
+            var entry = raw.getAsJsonObject();
+            String id = net.minecraft.resources.Identifier.parse(entry.get("id").getAsString()).toString();
+            var number = entry.getAsJsonPrimitive("level");
+            if (!number.isNumber()) throw new IllegalArgumentException("Invalid enchant level");
+            double level = number.getAsDouble();
+            if (!Double.isFinite(level) || level != Math.rint(level) || level < 1 || level > 255
+                    || result.putIfAbsent(id, (int)level) != null)
+                throw new IllegalArgumentException("Invalid or duplicate enchant");
+        }
+        return java.util.Map.copyOf(result);
+    }
+
+    static boolean enchantSelectedStack(HolderLookup.Provider registries, ItemStack stack,
+            java.util.Map<String, Integer> selected) {
+        if (stack.isEmpty() || selected.isEmpty()) return false;
+        var lookup = registries.lookupOrThrow(Registries.ENCHANTMENT);
+        // Resolve the complete selection first to avoid partially consuming a saved gift.
+        var resolved = new java.util.LinkedHashMap<net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment>, Integer>();
+        for (var entry : selected.entrySet()) {
+            var holder = lookup.get(net.minecraft.resources.ResourceKey.create(Registries.ENCHANTMENT,
+                net.minecraft.resources.Identifier.parse(entry.getKey())));
+            if (holder.isEmpty()) return false;
+            resolved.put(holder.get(), entry.getValue());
+        }
+        EnchantmentHelper.updateEnchantments(stack, mutable -> resolved.forEach(mutable::upgrade));
+        return true;
     }
 
     static void repair(ServerPlayer player, boolean armor) {

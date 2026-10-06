@@ -71,10 +71,18 @@ public final class TikTokMobMod {
     private final ArrayDeque<DeferredMob> deferredMobs = new ArrayDeque<>();
     private int notificationTicksRemaining;
     private volatile ModSettings settings = new ModSettings();
+    private String pinnedComment = "";
+    private String pinnedAuthor = "";
+    private byte[] pinnedAvatar = new byte[0];
     private java.nio.file.attribute.FileTime configModifiedAt;
 
     public TikTokMobMod(FMLJavaModLoadingContext context) {
         GiftNetwork.register();
+        GiftNetwork.onBoardPosition = ServerPinnedCommentBoard::position;
+        GiftNetwork.onBoardSelect = ServerPinnedCommentBoard::selectAimed;
+        GiftNetwork.onBoardDelete = player -> {
+            if (RuntimeSettings.canEdit(player)) ServerPinnedCommentBoard.deleteAimed(player);
+        };
         GiftNetwork.onSettingsPatch = (player, patch) -> {
             try {
                 RuntimeSettings.savePatch(CONFIG_PATH, com.google.gson.JsonParser.parseString(patch.json()).getAsJsonObject());
@@ -89,9 +97,12 @@ public final class TikTokMobMod {
         }
         reloadSettings(true);
         TickEvent.ServerTickEvent.Post.BUS.addListener(this::onServerTick);
+        net.minecraftforge.event.server.ServerStoppingEvent.BUS.addListener(event -> { ServerPinnedCommentBoard.clear(); LightningGift.clear(); });
         TrollEffects.register();
         SkyLaunch.register();
         GuardSummons.register();
+        SummonedMeatDrops.register();
+        Missions.register();
         GolemGuard.register(() -> settings);
         startBridgeOnce();
     }
@@ -135,7 +146,7 @@ public final class TikTokMobMod {
 
     static void acceptLine(String line, ModSettings settings) {
         String[] fields = line.split("\\t", -1);
-        if (fields.length < 3 || fields.length > 7) {
+        if (fields.length < 3 || fields.length > 8) {
             return;
         }
 
@@ -191,14 +202,24 @@ public final class TikTokMobMod {
         if (!List.of("like", "comment", "share", "follow", "view", "gift").contains(notificationKind)) {
             notificationKind = inferNotificationKind(kind, notification, donation);
         }
-        Interaction interaction = new Interaction(kind, userKey, displayName, notification, payload, donation, notificationKind);
+        byte[] avatar = new byte[0];
+        if (kind == InteractionKind.PIN_COMMENT && fields.length == 8 && !fields[7].isEmpty()) {
+            try {
+                avatar = Base64.getDecoder().decode(fields[7]);
+                if (avatar.length > 65_536) return;
+            } catch (IllegalArgumentException ignored) { return; }
+        }
+        Interaction interaction = new Interaction(kind, userKey, displayName, notification, payload, donation, notificationKind, avatar);
         (donation && settings.donation_priority_enabled ? PENDING_DONATIONS : PENDING).offer(interaction);
     }
 
     private void onServerTick(TickEvent.ServerTickEvent.Post event) {
+        ServerPinnedCommentBoard.tick(event.server(), settings);
+        Missions.tick(event.server(), settings);
         TrollEffects.tick();
         SkyLaunch.tick(event.server());
         SpecialRewards.tickTnt(event.server());
+        LightningGift.tick(event.server());
         int currentTick = event.server().getTickCount();
         if (currentTick % 20 == 0) {
             reloadSettings(false);
@@ -217,6 +238,7 @@ public final class TikTokMobMod {
         if (currentTick % 20 == 0) {
             for (ServerPlayer player : players) {
                 GiftNetwork.send(player, new GiftNetwork.UiState(playerSettings(player), GiftBagData.get(player).count(player)));
+                ServerPinnedCommentBoard.sendState(player);
             }
         }
         if (currentTick % 20 == 0) {
@@ -265,6 +287,17 @@ public final class TikTokMobMod {
     }
 
     private void handleInteraction(ServerPlayer player, Interaction interaction, int currentTick) {
+        if (interaction.kind() == InteractionKind.PIN_COMMENT) {
+            String text = interaction.payload();
+            if (text.isBlank()) return; // Only an aimed X request deletes a world board.
+            pinnedComment = text.substring(0, text.offsetByCodePoints(0,
+                Math.min(200, text.codePointCount(0, text.length()))));
+            pinnedAuthor = pinnedComment.isEmpty() ? "" : interaction.displayName();
+            pinnedAvatar = pinnedComment.isEmpty() ? new byte[0] : interaction.avatarPng();
+            ServerPinnedCommentBoard.add(player.level().getServer(), pinnedAuthor, pinnedComment, pinnedAvatar, settings);
+            LOGGER.info("Pinned comment added: avatar={} bytes", pinnedAvatar.length);
+            return;
+        }
         if (interaction.kind() == InteractionKind.GIFT_ALERT) {
             GiftDisplayFiles.paused(interaction.payload(), false);
             if (interaction.payload().matches("[a-f0-9]{32}"))
@@ -273,9 +306,10 @@ public final class TikTokMobMod {
         }
         enqueueNotification(interaction);
         switch (interaction.kind()) {
+            case MISSION_PENALTY -> Missions.penalty(player, interaction.payload());
             case TROLL_CHICKEN, TROLL_COBWEB, TROLL_PUMPKIN, TROLL_SLOWNESS,
                  TROLL_TELEPORT, TROLL_CREEPER, TROLL_ANVIL, TROLL_HOTBAR, TROLL_WARDEN, TROLL_BOX ->
-                TrollEffects.apply(interaction.kind().name(), player,
+                TrollEffects.apply(interaction.kind().name(), player, interaction.payload(),
                     type -> spawnMobOfType(player, interaction, currentTick, type),
                     stack -> giveItem(player, stack));
             case ENCHANT_ARMOR -> SpecialRewards.enchant(player, true, interaction.payload());
@@ -287,8 +321,10 @@ public final class TikTokMobMod {
             case KEEP_INVENTORY_OFF -> SpecialRewards.keepInventory(player, false);
             case SET_RESPAWN -> SpecialRewards.setRespawn(player);
             case KILL_PLAYER -> player.kill(player.level());
-            case SKY_LAUNCH -> SkyLaunch.start(player);
-            case SPAWN_TNT -> SpecialRewards.spawnTnt(player);
+            case SKY_LAUNCH -> SkyLaunch.start(player, interaction.payload());
+            case SPAWN_TNT -> SpecialRewards.spawnTnt(player, interaction.payload());
+            case LIGHTNING_PLAYER -> LightningGift.start(player, interaction.payload());
+            case CLEAR_TOOL_MOBS -> ClearToolMobs.kill(player.level().getServer(), interaction.displayName());
             case ARMORED_WOLF -> spawnMobOfType(player, interaction, currentTick, EntityTypes.WOLF);
             case DIVINE_CAT -> spawnMobOfType(player, interaction, currentTick, EntityTypes.CAT);
             case NETHERITE_ARMOR_FULL4, DIAMOND_ARMOR_FULL4 ->
@@ -429,6 +465,8 @@ public final class TikTokMobMod {
 
     private static String defaultNotification(InteractionKind kind) {
         return switch (kind) {
+            case MISSION_PENALTY -> "Trừ tiến độ nhiệm vụ";
+            case PIN_COMMENT -> "";
             case TROLL_CHICKEN, TROLL_COBWEB, TROLL_PUMPKIN, TROLL_SLOWNESS,
                  TROLL_TELEPORT, TROLL_CREEPER, TROLL_ANVIL, TROLL_HOTBAR, TROLL_WARDEN, TROLL_BOX -> "Quà chơi khăm";
             case CLEAR_INVENTORY -> "Clear sạch đồ người chơi";
@@ -438,6 +476,8 @@ public final class TikTokMobMod {
             case KILL_PLAYER -> "Giết người chơi";
             case SKY_LAUNCH -> "Bay thẳng lên trời";
             case SPAWN_TNT -> "TNT đã châm ngòi";
+            case LIGHTNING_PLAYER -> "Sấm sét vào người chơi";
+            case CLEAR_TOOL_MOBS -> "Dọn quái được tool triệu hồi";
             case ARMORED_WOLF -> "Chó sói giáp bảo vệ";
             case DIVINE_CAT -> "Mèo thần 200 máu · đuổi Creeper";
             case NETHERITE_ARMOR_FULL4 -> "Bộ giáp Netherite FULL enchant IV";
@@ -521,7 +561,7 @@ public final class TikTokMobMod {
     }
 
     private void spawnConfiguredMob(ServerPlayer player, Interaction interaction, int currentTick) {
-        Identifier identifier = Identifier.tryParse(interaction.payload());
+        Identifier identifier = Identifier.tryParse(RewardOptions.mobId(interaction.payload()));
         if (identifier == null || !BuiltInRegistries.ENTITY_TYPE.containsKey(identifier)) {
             LOGGER.warn("Mob cấu hình không hợp lệ: {}", interaction.payload());
             player.sendSystemMessage(Component.literal(
@@ -579,7 +619,8 @@ public final class TikTokMobMod {
         boolean fallback = player.isInWater() || !placeInFront(player, mob);
         if (fallback) mob.snapTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0);
         mob.finalizeSpawn(level, level.getCurrentDifficultyAt(mob.blockPosition()), EntitySpawnReason.EVENT, null);
-        TrollEffects.markToolMob(mob);
+        TrollEffects.markToolMob(mob, interaction.payload());
+        GolemGuard.markSummoned(mob);
         GolemGuard.mark(mob, player);
         if (interaction.kind() == InteractionKind.ARMORED_WOLF) GolemGuard.markWolf(mob, player);
         if (interaction.kind() == InteractionKind.DIVINE_CAT) GolemGuard.markCat(mob, player);
@@ -907,6 +948,7 @@ public final class TikTokMobMod {
             loaded.sanitize();
             int previousPort = settings.bridge_port;
             settings = loaded;
+            TrollEffects.explosionDefaults(loaded.creeper_break_blocks, loaded.tnt_break_blocks);
             configModifiedAt = modifiedAt;
             LOGGER.info("Đã nạp cấu hình TikTok Mob từ {}", CONFIG_PATH.toAbsolutePath());
             if (!force && previousPort != loaded.bridge_port) {
@@ -960,6 +1002,25 @@ public final class TikTokMobMod {
     }
 
     static final class ModSettings {
+        boolean creeper_break_blocks = false;
+        boolean tnt_break_blocks = true;
+        String pinned_board_background = "black";
+        String pinned_board_border = "light_blue";
+        String pinned_board_author_color = "#ffd99b";
+        String pinned_board_comment_color = "#f4f7fb";
+        double pinned_board_scale = 1.0;
+        double pinned_board_width = 1.0;
+        double pinned_board_height = 1.0;
+        double pinned_board_text_scale = 1.0;
+        double pinned_board_avatar_scale = 1.0;
+        double pinned_board_corner_radius = 0.16;
+        double pinned_board_avatar_x = 17.0;
+        double pinned_board_avatar_y = 50.0;
+        double pinned_board_rotation_speed = 1.0;
+        double pinned_board_author_x = 17.0;
+        double pinned_board_author_y = 82.0;
+        double pinned_board_content_x = 66.0;
+        double pinned_board_content_y = 60.0;
         Map<String, String> notification_display_modes = new HashMap<>();
         Map<String, NotificationPosition> notification_positions = new HashMap<>();
         int bridge_port = 9876;
@@ -998,6 +1059,23 @@ public final class TikTokMobMod {
         int universe_effect_level = 2;
 
         void sanitize() {
+            pinned_board_background = sanitizeDye(pinned_board_background, "black");
+            pinned_board_border = sanitizeDye(pinned_board_border, "light_blue");
+            pinned_board_author_color = sanitizeColor(pinned_board_author_color, "#ffd99b");
+            pinned_board_comment_color = sanitizeColor(pinned_board_comment_color, "#f4f7fb");
+            pinned_board_scale = clamp(pinned_board_scale, 0.1, 2.0);
+            pinned_board_width = clamp(pinned_board_width, 0.7, 2.5);
+            pinned_board_height = clamp(pinned_board_height, 0.7, 2.5);
+            pinned_board_text_scale = clamp(pinned_board_text_scale, 0.75, 1.4);
+            pinned_board_avatar_scale = clamp(pinned_board_avatar_scale, 0.5, 1.8);
+            pinned_board_corner_radius = clamp(pinned_board_corner_radius, 0, 0.4);
+            pinned_board_avatar_x = clamp(pinned_board_avatar_x, 0, 100);
+            pinned_board_avatar_y = clamp(pinned_board_avatar_y, 0, 100);
+            pinned_board_rotation_speed = clamp(pinned_board_rotation_speed, 0, 10);
+            pinned_board_author_x = clamp(pinned_board_author_x, 0, 100);
+            pinned_board_author_y = clamp(pinned_board_author_y, 0, 100);
+            pinned_board_content_x = clamp(pinned_board_content_x, 0, 100);
+            pinned_board_content_y = clamp(pinned_board_content_y, 0, 100);
             if (notification_display_modes == null) notification_display_modes = new HashMap<>();
             for (String key : List.of("like", "comment", "share", "follow", "view", "gift")) {
                 if (!List.of("legacy", "center", "chat").contains(String.valueOf(notification_display_modes.get(key))))
@@ -1045,16 +1123,22 @@ public final class TikTokMobMod {
             return value != null && value.matches("#[0-9a-fA-F]{6}") ? value : fallback;
         }
 
+        private static String sanitizeDye(String value, String fallback) {
+            try { return net.minecraft.world.item.DyeColor.valueOf(value.toUpperCase(java.util.Locale.ROOT)).name().toLowerCase(java.util.Locale.ROOT); }
+            catch (Exception ignored) { return fallback; }
+        }
+
         private static double clamp(double value, double minimum, double maximum) {
             return Math.max(minimum, Math.min(maximum, value));
         }
     }
 
     private enum InteractionKind {
-        KEEP_INVENTORY_ON, KEEP_INVENTORY_OFF, SET_RESPAWN, KILL_PLAYER, SKY_LAUNCH, SPAWN_TNT,
+        MISSION_PENALTY,
+        KEEP_INVENTORY_ON, KEEP_INVENTORY_OFF, SET_RESPAWN, KILL_PLAYER, SKY_LAUNCH, SPAWN_TNT, LIGHTNING_PLAYER, CLEAR_TOOL_MOBS,
         TROLL_CHICKEN, TROLL_COBWEB, TROLL_PUMPKIN, TROLL_SLOWNESS,
         TROLL_TELEPORT, TROLL_CREEPER, TROLL_ANVIL, TROLL_HOTBAR, TROLL_WARDEN, TROLL_BOX,
-        GIFT_ALERT,
+        GIFT_ALERT, PIN_COMMENT,
         ENCHANT_ARMOR, ENCHANT_WEAPON, REPAIR_ARMOR, REPAIR_HAND, FULL_HEAL, EXPERIENCE, CLEAR_INVENTORY, ARMORED_WOLF,
         DIVINE_CAT, NETHERITE_ARMOR_FULL4, DIAMOND_ARMOR_FULL4,
         NOTIFICATION,
@@ -1083,7 +1167,8 @@ public final class TikTokMobMod {
         String notification,
         String payload,
         boolean donation,
-        String notificationKind
+        String notificationKind,
+        byte[] avatarPng
     ) {
     }
 

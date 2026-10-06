@@ -55,6 +55,8 @@ final class RuntimeSettings {
         new Field("spawn_direction", "Vị trí triệu hồi", 0, "direction", 0, 0, "front"),
         new Field("spawn_height_offset", "Độ cao sinh mob", 0, "number", -64, 64, "0"),
         new Field("max_pending_events", "Hàng đợi gameplay", 0, "int", 10, 100000, "1000"),
+        new Field("creeper_break_blocks", "Creeper tool phá khối", 0, "bool", 0, 1, "false"),
+        new Field("tnt_break_blocks", "TNT tool phá khối", 0, "bool", 0, 1, "true"),
         new Field("enderman_targets_player", "Enderman nhắm người chơi", 0, "bool", 0, 1, "true"),
         new Field("mobs_persistent", "Chống biến mất tự nhiên", 0, "bool", 0, 1, "true"),
         new Field("show_death_counter", "Hiện bộ đếm số lần chết", 0, "bool", 0, 1, "true"),

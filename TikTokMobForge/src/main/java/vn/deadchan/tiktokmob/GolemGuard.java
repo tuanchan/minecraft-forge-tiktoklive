@@ -155,7 +155,10 @@ final class GolemGuard {
                 m -> isThreat(m, golem, owner))
                 .stream().min(java.util.Comparator.comparingDouble(m -> m.distanceToSqr(golem))).orElse(null);
             golem.setTarget(threat);
-            var target = golem.getTarget();
+            // getTarget() calls IronGolem.canAttack(), which filters out Creepers
+            // even after setTarget succeeded. Keep Forge's target-event result,
+            // but bypass that vanilla species filter for our own combat loop.
+            var target = golem.getTargetUnchecked();
             if (target != null && target.isAlive() && target.distanceToSqr(owner) <= 16 * 16) {
                 golem.getNavigation().moveTo(target, 1.2);
                 golem.getLookControl().setLookAt(target, 30, 30);
