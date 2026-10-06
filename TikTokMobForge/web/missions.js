@@ -83,12 +83,13 @@
     list.innerHTML='<option value="*">Tất cả mob</option>'+(state?.catalog?.mobs||[]).map(m=>`<option value="${esc(m.target.includes(':')?m.target:'minecraft:'+m.target)}">${esc(m.vietnamese_name)}</option>`).join('');
   }
   function missionCard(rule,current,preview=false) {
-    const safe=Math.max(0,current), percent=Math.max(0,Math.min(100,Math.round(100*safe/rule.target)));
+    const safe=Math.max(0,current), percent=Math.max(0,Math.min(100,100*safe/rule.target));
+    const percentText=percent>0&&percent<.01?'<0.01':percent<1?percent.toFixed(2).replace(/0+$/,'').replace(/\.$/,''):String(Math.round(percent));
     const milestones=Math.max(1,Number(rule.milestones)||1);
     const kill=rule.kind==='kill';
     return `<div class="mission-card ${kill?'mission-kill':'mission-diamond'}" style="--mission-progress:${percent}%;--mission-steps:${milestones}">
       <img class="mission-icon mission-icon-left" src="/assets/${kill?'iconkiemkc.png':'Cu%E1%BB%91c%20chim%20kim%20c%C6%B0%C6%A1ng%20ph%C3%A1t%20s%C3%A1ng%20pixel%20art.png'}" alt="">
-      <div class="mission-card-body"><strong>${esc(rule.title)}</strong><div class="mission-bar"><i></i><b></b><span>${percent}% · ${current} / ${rule.target}</span></div></div>
+      <div class="mission-card-body"><strong>${esc(rule.title)}</strong><div class="mission-bar"><i></i><b></b><span>${percentText}% · ${current} / ${rule.target}</span></div></div>
       <img class="mission-icon mission-icon-right" src="/assets/${kill?'zombieprogess.png':'quangkc.png'}" alt="">
       ${kill?'':`<img class="mission-diamond-gem" src="/assets/iconkc.png" alt="">`}
     </div>`;

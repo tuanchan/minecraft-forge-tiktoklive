@@ -1,0 +1,9 @@
+﻿from pathlib import Path
+p=Path('TikTokMobForge/web/runtime-settings.js');s=p.read_text(encoding='utf-8').replace('const id = incoming.includes(":") ? incoming : `minecraft:${incoming}`;', 'const reward = eventReward(incoming);\n          const id = eventRewardValue(reward);').replace('state.catalog.mobs.find(x => x.target === id)?.vietnamese_name || id','reward.vietnamese_name || reward.target').replace('eventMobImage(prefix, {kind:"mob", target:id})','eventMobImage(prefix, reward)');p.write_text(s,encoding='utf-8')
+p=Path('TikTokMobForge/web/app.js');s=p.read_text(encoding='utf-8').replace('    const raw = state.bridge[`${prefix}_mob_type`] || eventTypes.find(x => x.prefix === prefix).fallback;\n    \n','');p.write_text(s,encoding='utf-8')
+p=Path('TikTokMobForge/web/index.html');s=p.read_text(encoding='utf-8').replace('Mob theo sự kiện','Mob / quà theo sự kiện').replace('Chọn mob, số lượng','Chọn mob hoặc quà, số lượng').replace('Mob tối đa mỗi đợt View','Phần thưởng tối đa mỗi đợt View').replace('Mob theo tương tác, số lượng','Mob / quà theo tương tác, số lượng').replace('runtime-settings.js?v=', 'runtime-settings.js?v=rewards-');p.write_text(s,encoding='utf-8')
+p=Path('TikTokMobForge/tests/check_interaction_ui.py');s=p.read_text(encoding='utf-8').replace('            else:\n                route.continue_()', '''            elif route.request.url.endswith("/api/runtime-settings") and saves:
+                route.fulfill(json={"bridge": saves[-1]["bridge"], "mod": saves[-1]["mod"]})
+            else:
+                route.continue_()''');s=s.replace('        page.screenshot(path=str(artifacts / "interactions-desktop.png"), full_page=True)','''        assert page.locator('.event-editor[data-prefix="like"] .event-mob-dropdown').get_attribute('data-value') == 'item:minecraft:totem_of_undying'
+        page.screenshot(path=str(artifacts / "interactions-desktop.png"), full_page=True)''');p.write_text(s,encoding='utf-8')

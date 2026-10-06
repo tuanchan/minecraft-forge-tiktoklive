@@ -1,0 +1,2 @@
+﻿from pathlib import Path
+p=Path('TikTokMobForge/tests/check_interaction_ui.py');s=p.read_text();s=s.replace('"bridge": saves[-1]["bridge"]','"bridge": {key: saves[-1]["bridge"][key] for key in web.EVENT_KEYS}');s=s.replace('        assert saves and saves[-1]["bridge"]["comment_cooldown_seconds"] == 12','        assert saves and saves[-1]["bridge"]["comment_cooldown_seconds"] == 12, ([s["bridge"]["comment_cooldown_seconds"] for s in saves], page.locator("#comment_cooldown_seconds").input_value())');p.write_text(s)

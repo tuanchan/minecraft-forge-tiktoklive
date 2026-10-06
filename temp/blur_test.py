@@ -1,0 +1,2 @@
+﻿from pathlib import Path
+p=Path('TikTokMobForge/tests/browser_reward_options_smoke.py');s=p.read_text(encoding='utf-8').replace('browser.evaluate("tntInput.blur()")', 'browser.evaluate("tntInput.dispatchEvent(new Event(\'blur\'))")');a='                assert browser.evaluate("tntInput.value") == \'4\',';start=s.index(a);end=s.index('\n',start);s=s[:start]+'                assert browser.evaluate("tntInput.value") == \'4\''+s[end:];p.write_text(s,encoding='utf-8')
